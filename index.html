@@ -73,8 +73,13 @@
     html, body { overscroll-behavior: none; }
     body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
     .app-header { padding-top: max(1rem, env(safe-area-inset-top)); }
-    #mobile-drawer { padding-top: env(safe-area-inset-top); }
     #main-content { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
+    @media (max-width: 767px) {
+      /* keep content clear of the fixed bottom tab bar */
+      #main-content { padding-bottom: calc(5.5rem + env(safe-area-inset-bottom)); }
+      #map-fullscreen { z-index: 10000; }
+    }
+    .tab-btn.tab-active { color: #EA580C; }
 
     @media (max-width: 767px) {
       /* iOS zooms the page when a focused field is under 16px — kill that. */
@@ -333,17 +338,21 @@
         </div>
         
         <nav class="space-y-1.5">
-          <button data-action="route" data-route="home" id="nav-desk-btn-home" class="w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold shadow-md transition">
+          <button data-action="route" data-route="landing" id="nav-desk-btn-landing" class="w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold shadow-md transition">
             <i data-lucide="home" class="w-4.5 h-4.5"></i>
             <span class="text-xs">Home</span>
           </button>
+          <button data-action="route" data-route="route" id="nav-desk-btn-route" class="w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-[#D9E2EC] hover:text-white hover:bg-white/10 transition font-semibold">
+            <i data-lucide="map" class="w-4.5 h-4.5"></i>
+            <span class="text-xs">Route</span>
+          </button>
           <button data-action="route" data-route="store-select" id="nav-desk-btn-store-select" class="w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-[#D9E2EC] hover:text-white hover:bg-white/10 transition font-semibold">
-            <i data-lucide="plus-circle" class="w-4.5 h-4.5"></i>
-            <span class="text-xs">Inspect Store</span>
+            <i data-lucide="clipboard-check" class="w-4.5 h-4.5"></i>
+            <span class="text-xs">Inspect</span>
           </button>
           <button data-action="route" data-route="overview" id="nav-desk-btn-overview" class="w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-[#D9E2EC] hover:text-white hover:bg-white/10 transition font-semibold">
-            <i data-lucide="search" class="w-4.5 h-4.5"></i>
-            <span class="text-xs">Overview</span>
+            <i data-lucide="bar-chart-3" class="w-4.5 h-4.5"></i>
+            <span class="text-xs">Results</span>
           </button>
           <button data-action="route" data-route="settings" id="nav-desk-btn-settings" class="w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-[#D9E2EC] hover:text-white hover:bg-white/10 transition font-semibold">
             <i data-lucide="sliders" class="w-4.5 h-4.5"></i>
@@ -357,6 +366,7 @@
           <span id="sidebar-status-dot" class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-md"></span>
           <span id="sidebar-status-text">Live Connection Active</span>
         </div>
+        <div class="text-[9px] font-mono text-orange-200/40 mt-1.5">v2.6.1</div>
       </div>
     </aside>
 
@@ -366,9 +376,6 @@
       <!-- Premium Header -->
       <header class="app-header bg-white/90 backdrop-blur-md px-4 md:px-6 py-4 md:py-5 border-b border-neutral-100 flex items-center justify-between gap-2 shrink-0">
         <div class="flex items-center gap-2 min-w-0">
-          <button data-action="open-drawer" class="md:hidden p-2 -ml-1 rounded-xl hover:bg-neutral-100 active:scale-95 transition shrink-0" id="hamburger-btn" title="Menu" aria-label="Open menu">
-            <i data-lucide="menu" class="w-6 h-6 text-neutral-800"></i>
-          </button>
           <button data-action="mobile-back" class="hidden p-2 -ml-1 rounded-xl hover:bg-neutral-100 active:scale-95 transition shrink-0" id="mobile-back-btn" title="Back" aria-label="Go back">
             <i data-lucide="arrow-left" class="w-6 h-6 text-neutral-800"></i>
           </button>
@@ -377,7 +384,7 @@
             <p class="text-[11px] md:text-xs text-neutral-500 font-normal mt-0.5 truncate" id="header-subtitle">Field Auditor Hub</p>
           </div>
         </div>
-        <button data-action="go-home" class="p-2.5 rounded-full hover:bg-neutral-100 transition active:scale-95 flex items-center justify-center gap-1 bg-neutral-50/50 border border-neutral-200 shrink-0" id="header-home-btn" title="Home">
+        <button data-action="go-home" class="p-2.5 rounded-full hover:bg-neutral-100 transition active:scale-95 hidden md:flex items-center justify-center gap-1 bg-neutral-50/50 border border-neutral-200 shrink-0" id="header-home-btn" title="Home">
           <i data-lucide="home" class="w-5 h-5 text-neutral-800"></i>
         </button>
       </header>
@@ -426,61 +433,8 @@
         <span class="text-[#EA580C] font-bold text-xs flex items-center gap-1 mt-auto">Start checklist <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i></span>
       </button>
     </div>
-    <div class="flex items-center justify-center gap-4 pt-2 flex-wrap">
-      <button data-action="route" data-route="overview" class="text-xs font-semibold text-neutral-500 hover:text-[#1E3A8A] flex items-center gap-1.5"><i data-lucide="bar-chart-3" class="w-4 h-4"></i> Field Reports</button>
-      <span class="text-neutral-300">&middot;</span>
-      <button data-action="route" data-route="matching" class="text-xs font-semibold text-neutral-500 hover:text-[#1E3A8A] flex items-center gap-1.5"><i data-lucide="git-compare" class="w-4 h-4"></i> Store Matching</button>
-      <span class="text-neutral-300">&middot;</span>
-      <button data-action="route" data-route="settings" class="text-xs font-semibold text-neutral-500 hover:text-[#1E3A8A] flex items-center gap-1.5"><i data-lucide="settings" class="w-4 h-4"></i> Settings</button>
-    </div>
   </div>
 </div>
-
-<div id="view-home" class="view-panel space-y-8">
-          <div class="py-6 text-center space-y-2">
-            <p class="text-sm font-extrabold text-[#EA580C] uppercase tracking-widest">Workspace</p>
-            <h2 class="text-3xl font-extrabold text-[#1E3A8A] tracking-tight">DPM Acquisition Tracker</h2>
-          </div>
-
-          <div class="space-y-4">
-            <button data-action="route" data-route="store-select" class="w-full flex items-center justify-between bg-white border border-orange-100/45 p-6 rounded-3xl transition active:scale-[0.98] group text-left shadow-sm hover:border-[#EA580C]/40 cursor-pointer">
-              <div class="space-y-1">
-                <span class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <i data-lucide="plus-circle" class="w-5 h-5 text-[#EA580C]"></i>
-                  Store Inspection
-                </span>
-                <p class="text-xs text-neutral-500">Conduct a facility or equipment physical run.</p>
-              </div>
-              <i data-lucide="chevron-right" class="w-5 h-5 text-neutral-400 group-hover:text-[#EA580C] transition translate-x-0 group-hover:translate-x-1"></i>
-            </button>
-
-            <button data-action="route" data-route="overview" class="w-full flex items-center justify-between bg-white border border-orange-100/45 p-6 rounded-3xl transition active:scale-[0.98] group text-left shadow-sm hover:border-[#EA580C]/40 cursor-pointer">
-              <div class="space-y-1">
-                <span class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <i data-lucide="search" class="w-5 h-5 text-[#EA580C]"></i>
-                  Overview History
-                </span>
-                <p class="text-xs text-neutral-500">Filter, browse records, view ratings, and inspect photos.</p>
-              </div>
-              <i data-lucide="chevron-right" class="w-5 h-5 text-neutral-400 group-hover:text-[#EA580C] transition translate-x-0 group-hover:translate-x-1"></i>
-            </button>
-
-            <button data-action="route" data-route="settings" class="w-full flex items-center justify-between bg-white border border-orange-100/45 p-6 rounded-3xl transition active:scale-[0.98] group text-left shadow-sm hover:border-[#EA580C]/40 cursor-pointer">
-              <div class="space-y-1">
-                <span class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                  <i data-lucide="sliders" class="w-5 h-5 text-[#EA580C]"></i>
-                  Settings Configuration
-                </span>
-                <p class="text-xs text-neutral-500">Manage stores list, categories, and equipment items.</p>
-              </div>
-              <i data-lucide="chevron-right" class="w-5 h-5 text-neutral-400 group-hover:text-[#EA580C] transition translate-x-0 group-hover:translate-x-1"></i>
-            </button>
-          </div>
-
-          <div class="pt-6 border-t border-orange-100/30 text-center text-[10px] font-bold font-mono text-orange-600 tracking-wider uppercase">
-            Live Connection Active with Firestore DB
-          </div>
-        </div>
 
         <!-- VIEW: STORE SELECT -->
         <div id="view-store-select" class="view-panel space-y-6 hidden">
@@ -548,7 +502,7 @@
             </button>
           </div>
 
-          <div id="facility-items-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5"></div>
+          <div id="facility-items-list" class="grid grid-cols-1 gap-3 md:gap-5 max-w-2xl mx-auto w-full"></div>
 
           <div class="pt-4">
             <button data-action="next-facility" class="w-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-semibold py-4 rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
@@ -570,7 +524,7 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div class="grid grid-cols-2 gap-3 md:gap-5">
             <div class="space-y-3">
               <div class="flex items-center gap-2 sticky top-0 z-10 bg-[#FCFAF7]/95 backdrop-blur py-1">
                 <span class="p-1 bg-[#1E3A8A] text-white rounded-lg flex items-center justify-center"><i data-lucide="zap" class="w-3.5 h-3.5"></i></span>
@@ -779,6 +733,7 @@
           </div>
         </div>
 
+        <div class="pt-8 pb-2 text-center text-[10px] font-mono text-neutral-400 select-none">DPM Acquisition Tracker &middot; v2.6.1</div>
       </main>
 
       <!-- Global Overlay Loader with blur -->
@@ -824,33 +779,29 @@
         </div>
       </div>
 
-      <!-- IOS Navigation Bottom Hub -->
-      <!-- Mobile slide-in drawer + scrim (replaces bottom nav) -->
-      <div id="drawer-scrim" class="md:hidden hidden fixed inset-0 bg-black/50 z-40 transition-opacity" data-action="close-drawer"></div>
-      <aside id="mobile-drawer" class="md:hidden fixed top-0 left-0 bottom-0 w-72 max-w-[80%] bg-[#1E3A8A] z-50 flex flex-col text-white shadow-2xl transition-transform duration-300 -translate-x-full">
-        <div class="p-6 border-b border-white/10 flex items-center justify-between">
-          <h2 class="text-lg font-extrabold tracking-tight flex items-center gap-2.5">
-            <span class="p-1.5 bg-[#EA580C] rounded-xl flex items-center justify-center"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
-            DPM Field
-          </h2>
-          <button data-action="close-drawer" class="p-1.5 rounded-lg hover:bg-white/10 active:scale-95" aria-label="Close menu"><i data-lucide="x" class="w-5 h-5"></i></button>
-        </div>
-        <nav class="flex-1 overflow-y-auto p-4 space-y-1.5">
-          <button data-action="route" data-route="landing" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-landing"><i data-lucide="home" class="w-5 h-5"></i> Home Hub</button>
-          <button data-action="route" data-route="home" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-home"><i data-lucide="layout-dashboard" class="w-5 h-5"></i> Workspace</button>
-          <button data-action="route" data-route="route" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-route"><i data-lucide="map" class="w-5 h-5"></i> Route Guidance</button>
-          <button data-action="route" data-route="store-select" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-store-select"><i data-lucide="clipboard-check" class="w-5 h-5"></i> Start Inspection</button>
-          <button data-action="route" data-route="facility" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-facility"><i data-lucide="building-2" class="w-5 h-5"></i> Facility Checklist</button>
-          <button data-action="route" data-route="equipment" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-equipment"><i data-lucide="wrench" class="w-5 h-5"></i> Equipment Checklist</button>
-          <button data-action="route" data-route="overview" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-overview"><i data-lucide="bar-chart-3" class="w-5 h-5"></i> Field Reports</button>
-          <button data-action="route" data-route="matching" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-matching"><i data-lucide="git-compare" class="w-5 h-5"></i> Store Matching</button>
-          <button data-action="route" data-route="settings" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-settings"><i data-lucide="settings" class="w-5 h-5"></i> Settings</button>
-        </nav>
-        <div class="p-4 border-t border-white/10 flex items-center gap-2 text-[11px] text-[#D9E2EC]/70">
-          <span id="drawer-status-dot" class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
-          <span id="drawer-status-text">Live sync active</span>
-        </div>
-      </aside>
+      <!-- Mobile bottom tab bar -->
+      <nav id="bottom-bar" class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-neutral-200 grid grid-cols-5 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]" style="padding-bottom:env(safe-area-inset-bottom)">
+        <button data-action="route" data-route="landing" id="tab-btn-landing" class="tab-btn flex flex-col items-center justify-center gap-0.5 py-2 text-neutral-400 transition active:scale-95">
+          <i data-lucide="home" class="w-5 h-5"></i>
+          <span class="text-[9px] font-bold tracking-wide">Home</span>
+        </button>
+        <button data-action="route" data-route="route" id="tab-btn-route" class="tab-btn flex flex-col items-center justify-center gap-0.5 py-2 text-neutral-400 transition active:scale-95">
+          <i data-lucide="map" class="w-5 h-5"></i>
+          <span class="text-[9px] font-bold tracking-wide">Route</span>
+        </button>
+        <button data-action="route" data-route="store-select" id="tab-btn-store-select" class="tab-btn flex flex-col items-center justify-center gap-0.5 py-2 text-neutral-400 transition active:scale-95">
+          <i data-lucide="clipboard-check" class="w-5 h-5"></i>
+          <span class="text-[9px] font-bold tracking-wide">Inspect</span>
+        </button>
+        <button data-action="route" data-route="overview" id="tab-btn-overview" class="tab-btn flex flex-col items-center justify-center gap-0.5 py-2 text-neutral-400 transition active:scale-95">
+          <i data-lucide="bar-chart-3" class="w-5 h-5"></i>
+          <span class="text-[9px] font-bold tracking-wide">Results</span>
+        </button>
+        <button data-action="route" data-route="settings" id="tab-btn-settings" class="tab-btn flex flex-col items-center justify-center gap-0.5 py-2 text-neutral-400 transition active:scale-95">
+          <i data-lucide="settings" class="w-5 h-5"></i>
+          <span class="text-[9px] font-bold tracking-wide">Settings</span>
+        </button>
+      </nav>
     </div>
   </div>
 
@@ -893,7 +844,7 @@
       <option value="day2">Day 2 only</option>
     </select>
     <span class="spacer"></span>
-    <button class="btn" id="btnViewMap" onclick="window.location.hash='#route-map'">🗺 View map</button>
+    <button class="btn" id="btnViewMap" onclick="window.R_openMapOverlay && window.R_openMapOverlay()">🗺 View map</button>
     <button class="btn" id="btnMapToggle">🗺 Show map</button>
     <button class="btn" id="btnPrint">🖨 Print</button>
     <span class="saveState" id="saveState">Synced to cloud</span>
@@ -922,24 +873,11 @@
 
 
 </div>
-<div id="view-matching" class="view-panel hidden">
-  <div class="max-w-4xl mx-auto w-full space-y-6">
-    <div class="space-y-1">
-      <h2 class="text-2xl font-bold tracking-tight text-[#1E3A8A]">Store Matching</h2>
-      <p class="text-xs text-neutral-500">The route plan is the source of truth. This reconciles it against the inspection store list.</p>
-    </div>
-    <div class="flex flex-wrap gap-3">
-      <button data-action="run-store-match" class="bg-[#1E3A8A] text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-[#1E40AF] transition flex items-center gap-2 cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Run match check</button>
-      <button data-action="add-missing-stores" class="bg-green-600 text-white font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-green-700 transition flex items-center gap-2 cursor-pointer"><i data-lucide="plus" class="w-4 h-4"></i> Add missing route stores to inspection</button>
-    </div>
-    <div id="matching-results" class="space-y-4 text-sm"></div>
-  </div>
-</div>
 <!-- Full-screen route map (mobile). The #map node is moved in here on open and
      moved back on close so the same Leaflet instance is reused. -->
 <div id="map-fullscreen">
   <div class="mfs-top">
-    <button class="mfs-back" onclick="window.location.hash='#route'">&larr; Back</button>
+    <button class="mfs-back" onclick="window.R_closeMapOverlay && window.R_closeMapOverlay()">&larr; Back</button>
     <h2>Route Map</h2>
   </div>
   <div class="mfs-body" id="map-fullscreen-body"></div>
@@ -1063,7 +1001,7 @@
       // Inspection details
       selectedStore: '',
       selectedMode: 'facility', // 'facility', 'equipment', 'both'
-      currentView: 'home',
+      currentView: 'landing',
       activeDocId: '',
       facilityAnswers: {},
       equipmentAnswers: {},
@@ -1162,6 +1100,40 @@
         .replace(/'/g, "&#039;");
     }
 
+    // The route plan is the source of truth for WHICH stores exist. Store
+    // pickers, the fleet heatmap, filters and completion stats all show
+    // exactly the route-plan stores (24) — nothing more, nothing less.
+    function allowedStoreSet() {
+      const names = (window.R_routeStoreNames ? window.R_routeStoreNames() : []) || [];
+      return new Set(names.map(n => String(n).trim().toLowerCase()));
+    }
+    function visibleStores() {
+      const allow = allowedStoreSet();
+      if (!allow.size) return window.state.stores;
+      return window.state.stores.filter(st => allow.has(String(st.name || '').trim().toLowerCase()));
+    }
+    // Any route store missing from the stores collection gets created silently
+    // (once per session) so it can be inspected. Extras are hidden, not deleted
+    // — remove them in Settings if you want them gone for good.
+    let __storeSyncDone = false;
+    async function ensureRouteStoresExist() {
+      if (__storeSyncDone) return;
+      const allow = allowedStoreSet();
+      if (!allow.size || !window.state.stores) return;
+      const have = new Set(window.state.stores.map(st => String(st.name || '').trim().toLowerCase()));
+      const missing = (window.R_routeStoreNames ? window.R_routeStoreNames() : [])
+        .filter(n => !have.has(String(n).trim().toLowerCase()));
+      if (!missing.length) { __storeSyncDone = true; return; }
+      __storeSyncDone = true;
+      try {
+        for (const name of missing) {
+          await addDoc(collection(db, "stores"), { name: name, cluster: '' });
+        }
+        console.log('Auto-added route stores:', missing);
+      } catch (e) { console.error('Store sync failed', e); __storeSyncDone = false; }
+    }
+    window.ensureRouteStoresExist = ensureRouteStoresExist;
+
     // ONE rule for the whole app: an item only counts as a real observation
     // if it has a rating OR at least one photo. A photo with no rating counts
     // as "Good". Everything else is an empty placeholder and never shows up.
@@ -1226,6 +1198,8 @@
         if (window.state.currentView === 'settings' && !window.state.editingStoreId) renderSettingsItems();
         updateFleetStats();
         if (window.state.currentView === 'overview') renderOverviewCardsList();
+        // Keep the collection aligned with the 24 route-plan stores.
+        setTimeout(ensureRouteStoresExist, 500);
       }, (err) => {
         console.error("Firestore stores sync error:", err);
         sendNotification("Database configuration failed to download. Check settings.", "error");
@@ -1261,9 +1235,10 @@
     function updateFleetStats() {
       let fullyCompletedStores = 0;
       let sumPercent = 0;
-      const totalStoresCount = window.state.stores.length || 1;
+      const fleet = visibleStores();
+      const totalStoresCount = fleet.length || 1;
 
-      window.state.stores.forEach(store => {
+      fleet.forEach(store => {
         const status = getStoreStatus(store.name);
         if (status.percent === 100) {
           fullyCompletedStores++;
@@ -1271,7 +1246,7 @@
         sumPercent += status.percent;
       });
 
-      const completionPercent = window.state.stores.length ? Math.min(100, Math.round(sumPercent / window.state.stores.length)) : 0;
+      const completionPercent = fleet.length ? Math.min(100, Math.round(sumPercent / fleet.length)) : 0;
 
       const completeTextEl = document.getElementById('stats-complete-text');
       const completePercentEl = document.getElementById('stats-complete-percent');
@@ -1363,7 +1338,7 @@
     // Pre-fills the store, remembers last inspector name on this device, then
     // routes into the normal inspection start screen.
     window.__startInspectionForStore = function (storeName, groupKey) {
-      window.location.hash = '#store-select';
+      window.navigate('store-select');
       // Wait a tick for the panel + dropdown to render, then pre-select.
       setTimeout(() => {
         const sel = document.getElementById('select-store-input');
@@ -1937,7 +1912,7 @@
       defaultOpt.selected = !window.state.selectedStore;
       select.appendChild(defaultOpt);
 
-      const sorted = sortStores(window.state.stores);
+      const sorted = sortStores(visibleStores());
       sorted.forEach(store => {
         const opt = document.createElement('option');
         opt.value = store.name;
@@ -1951,7 +1926,7 @@
       const select = document.getElementById('filter-store-select');
       if (!select) return;
       select.innerHTML = '<option value="">All Store Locations</option>';
-      const sorted = sortStores(window.state.stores);
+      const sorted = sortStores(visibleStores());
       sorted.forEach(store => {
         const opt = document.createElement('option');
         opt.value = store.name;
@@ -2523,7 +2498,7 @@
         return;
       }
 
-      const sorted = sortStores(window.state.stores);
+      const sorted = sortStores(visibleStores());
       sorted.forEach(S => {
         const status = getStoreStatus(S.name);
         const isSelected = (window.state.filterStore === S.name);
@@ -2710,11 +2685,9 @@
 
     function navigate(viewName) {
       // Checklists need an active inspection to save into. Reached directly
-      // (drawer / URL) without one, bounce to store selection instead.
+      // (tab bar / direct) without one, bounce to store selection instead.
       if ((viewName === 'facility' || viewName === 'equipment') && !window.state.activeDocId) {
         sendNotification("Pick a store and inspector first — then the checklist opens.", "info");
-        closeDrawer();
-        if (window.location.hash !== '#store-select') { window.location.hash = '#store-select'; return; }
         viewName = 'store-select';
       }
       window.state.currentView = viewName;
@@ -2727,12 +2700,6 @@
       } else if (viewName === 'route') {
         if (titleEl) titleEl.innerText = "Route Guidance";
         if (subtitleEl) subtitleEl.innerText = "Live Two-Party Schedule";
-      } else if (viewName === 'matching') {
-        if (titleEl) titleEl.innerText = "Store Matching";
-        if (subtitleEl) subtitleEl.innerText = "Reconcile Route & Inspection Stores";
-      } else if (viewName === 'home') {
-        if (titleEl) titleEl.innerText = "DPM Acquisition Tracker";
-        if (subtitleEl) subtitleEl.innerText = "Field Auditor Hub";
       } else if (viewName === 'store-select') {
         if (titleEl) titleEl.innerText = "Location Info";
         if (subtitleEl) subtitleEl.innerText = "Checklist Target Selection";
@@ -2743,7 +2710,7 @@
         if (titleEl) titleEl.innerText = "Equipment Checklist";
         if (subtitleEl) subtitleEl.innerText = "Machinery & Electrical Unit Checks";
       } else if (viewName === 'overview') {
-        if (titleEl) titleEl.innerText = "Field Reports";
+        if (titleEl) titleEl.innerText = "Results";
         if (subtitleEl) subtitleEl.innerText = "Filter & Search Audit History";
       } else if (viewName === 'settings') {
         if (titleEl) titleEl.innerText = "Settings Configuration";
@@ -2752,7 +2719,7 @@
 
       const homeBtn = document.getElementById('header-home-btn');
       if (homeBtn) {
-        if (viewName === 'home') homeBtn.classList.add('hidden');
+        if (viewName === 'landing') homeBtn.classList.add('hidden');
         else homeBtn.classList.remove('hidden');
       }
 
@@ -2760,24 +2727,22 @@
       const activePanel = document.getElementById(`view-${viewName}`);
       if (activePanel) activePanel.classList.remove('hidden');
 
-      ['landing', 'route', 'home', 'store-select', 'facility', 'equipment', 'overview', 'matching', 'settings'].forEach(route => {
-        const dBtn = document.getElementById(`drawer-btn-${route}`);
-        if (dBtn) {
-          if (route === viewName) dBtn.className = "drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold transition text-sm";
-          else dBtn.className = "drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm";
-        }
+      // Which of the 5 tabs owns this view (checklists live under Inspect).
+      const tabOf = { 'landing': 'landing', 'route': 'route', 'store-select': 'store-select',
+        'facility': 'store-select', 'equipment': 'store-select', 'overview': 'overview', 'settings': 'settings' };
+      const activeTab = tabOf[viewName] || 'landing';
+      ['landing', 'route', 'store-select', 'overview', 'settings'].forEach(route => {
         const deskBtn = document.getElementById(`nav-desk-btn-${route}`);
         if (deskBtn) {
-          if (route === viewName) deskBtn.className = "w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold shadow-md transition";
+          if (route === activeTab) deskBtn.className = "w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold shadow-md transition";
           else deskBtn.className = "w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-[#D9E2EC] hover:text-white hover:bg-white/10 transition font-semibold";
         }
+        const tabBtn = document.getElementById(`tab-btn-${route}`);
+        if (tabBtn) tabBtn.classList.toggle('tab-active', route === activeTab);
       });
 
-      // Mobile: show the back button (and hide hamburger) on any page that has a
-      // logical parent; on top-level pages show the hamburger instead.
+      // Mobile: show the back arrow only on checklist sub-screens.
       updateMobileNavButtons(viewName);
-      // Close the drawer whenever we navigate.
-      closeDrawer();
 
       if (viewName === 'store-select') renderStoreSelections();
       else if (viewName === 'facility') renderFacilityChecklist();
@@ -2785,49 +2750,26 @@
       else if (viewName === 'overview') loadInspectionsHistory();
       else if (viewName === 'settings') renderSettingsItems();
       else if (viewName === 'route') { if (window.R_openRouteView) window.R_openRouteView(); }
-      else if (viewName === 'matching') { if (window.renderStoreMatching) window.renderStoreMatching(); }
 
       window.scrollTo(0, 0);
     }
     window.navigate = navigate;
 
-    // ---- Mobile drawer + back-button logic ----
+    // ---- Mobile back-arrow logic (checklist sub-screens only) ----
     // Logical parent for the back button (returns to a sensible place, not raw history).
+    // The bottom tab bar is the navigation; only the checklists keep an
+    // in-header back arrow (they're sub-screens of Inspect).
     const VIEW_PARENTS = {
-      'route': 'landing',
-      'store-select': 'landing',
       'facility': 'store-select',
-      'equipment': 'store-select',
-      'overview': 'landing',
-      'matching': 'landing',
-      'settings': 'landing',
-      'home': 'landing'
+      'equipment': 'store-select'
     };
     function updateMobileNavButtons(viewName) {
       const back = document.getElementById('mobile-back-btn');
-      const burger = document.getElementById('hamburger-btn');
-      const hasParent = !!VIEW_PARENTS[viewName];
-      if (back && burger) {
-        if (hasParent) { back.classList.remove('hidden'); burger.classList.add('hidden'); }
-        else { back.classList.add('hidden'); burger.classList.remove('hidden'); }
-      }
-    }
-    function openDrawer() {
-      const d = document.getElementById('mobile-drawer');
-      const s = document.getElementById('drawer-scrim');
-      if (d) d.classList.remove('-translate-x-full');
-      if (s) s.classList.remove('hidden');
-    }
-    function closeDrawer() {
-      const d = document.getElementById('mobile-drawer');
-      const s = document.getElementById('drawer-scrim');
-      if (d) d.classList.add('-translate-x-full');
-      if (s) s.classList.add('hidden');
+      if (back) back.classList.toggle('hidden', !VIEW_PARENTS[viewName]);
     }
     window.__mobileBack = function () {
       const cur = window.state.currentView;
-      const parent = VIEW_PARENTS[cur] || 'landing';
-      window.location.hash = '#' + parent;
+      navigate(VIEW_PARENTS[cur] || 'landing');
     };
 
     // =========================================================================
@@ -2884,24 +2826,26 @@
       });
     });
 
-    function syncHash() {
-      const hash = window.location.hash.replace('#', '');
-      // #route-map = route view with the full-screen map open. Browser back
-      // (#route-map -> #route) closes the map naturally.
-      if (hash === 'route-map') {
-        navigate('route');
-        if (window.R_openMapOverlay) window.R_openMapOverlay();
-        return;
-      }
+    // =========================================================================
+    // NO-URL ROUTING — the address bar never changes. The phone's back
+    // button/gesture always returns to Home (a sentinel history entry is kept
+    // so back doesn't leave the app while it's off the Home tab).
+    // =========================================================================
+    try {
+      // strip any legacy #hash from bookmarked links
+      history.replaceState({ dpm: 1 }, '', window.location.pathname + window.location.search);
+      history.pushState({ dpm: 1, guard: 1 }, '');
+    } catch (e) {}
+    window.addEventListener('popstate', () => {
       if (window.R_closeMapOverlay) window.R_closeMapOverlay();
-      if (['landing', 'home', 'route', 'matching', 'store-select', 'facility', 'equipment', 'overview', 'settings'].includes(hash)) {
-        navigate(hash);
-      } else {
+      if (window.R_closePrintModal) window.R_closePrintModal();
+      if (window.state.currentView !== 'landing') {
         navigate('landing');
+        try { history.pushState({ dpm: 1, guard: 1 }, ''); } catch (e) {}
       }
-    }
-    window.addEventListener('hashchange', syncHash);
-    window.addEventListener('DOMContentLoaded', syncHash);
+      // already on Home: the sentinel is consumed — the next back exits the app
+    });
+    window.addEventListener('DOMContentLoaded', () => navigate('landing'));
 
     // CRITICAL EVENT DELEGATION
     document.addEventListener('click', async (e) => {
@@ -2913,24 +2857,15 @@
       const valAttr = target.getAttribute('data-val');
 
       if (action === 'route') {
-        const rValue = target.getAttribute('data-route');
-        window.location.hash = `#${rValue}`;
+        navigate(target.getAttribute('data-route'));
       }
 
       if (action === 'mobile-back') {
         window.__mobileBack();
       }
 
-      if (action === 'open-drawer') {
-        openDrawer();
-      }
-
-      if (action === 'close-drawer') {
-        closeDrawer();
-      }
-
       if (action === 'go-home') {
-        window.location.hash = '#landing';
+        navigate('landing');
       }
 
       // Settings Stores Sorting Order Toggle
@@ -3072,9 +3007,9 @@
           sendNotification(existingData ? "Linked to active inspection record" : "Inbound new live session initialized", "success");
 
           if (modeVal === 'facility' || modeVal === 'both') {
-            window.location.hash = '#facility';
+            navigate('facility');
           } else {
-            window.location.hash = '#equipment';
+            navigate('equipment');
           }
         } catch (err) {
           console.error("Firestore setup error:", err);
@@ -3101,7 +3036,7 @@
             window.state.equipmentAnswers = {};
             dirtyItems.clear();
             updateUploadBadge();
-            window.location.hash = '#home';
+            navigate('landing');
           }
         );
       }
@@ -3181,10 +3116,10 @@
           sendNotification(`${stillUploading} photo(s) still uploading — they'll attach automatically when done.`, "info");
         }
         if (window.state.selectedMode === 'both') {
-          window.location.hash = '#equipment';
+          navigate('equipment');
         } else {
           sendNotification("Audit complete and synced with server", "success");
-          window.location.hash = '#overview';
+          navigate('overview');
         }
       }
 
@@ -3222,7 +3157,7 @@
           sendNotification(`${stillUploading} photo(s) still uploading — they'll attach automatically when done.`, "info");
         }
         sendNotification("Audit complete and synced with server", "success");
-        window.location.hash = '#overview';
+        navigate('overview');
       }
 
       if (action === 'open-lightbox') {
@@ -4166,6 +4101,19 @@ function R_commitOrderFromDOM(gk){
 let R_map=null;
 let R_layerGroups={};
 function R_isPhone(){ return window.matchMedia('(max-width:767px)').matches; }
+
+// The 24 stores on the route plan are THE inspection stores. Everything
+// store-facing in the app filters to this list.
+window.R_routeStoreNames = function(){
+  try{
+    const st = (typeof RSTATE!=='undefined' && RSTATE) ? RSTATE : (R_load() || R_freshState());
+    const names=[];
+    for(const gk of ['groupA','groupB']){
+      (st.parties[gk].stops||[]).forEach(s=>{ if(s.kind==='store' && s.name) names.push(s.name); });
+    }
+    return names;
+  }catch(e){ return []; }
+};
 
 // ---- Device-local route view filter ----
 // The View filter is per-phone (saved locally), NOT part of the shared cloud
