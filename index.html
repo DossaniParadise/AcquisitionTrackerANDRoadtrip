@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#1E3A8A">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DPM Tracker">
   <title>DPM Acquisition Tracker</title>
   
   <!-- Premium Hospitality/Restaurant Brand Tailwind CSS Config -->
@@ -63,6 +68,40 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+
+    /* ---------- Mobile "native app" feel ---------- */
+    html, body { overscroll-behavior: none; }
+    body { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    .app-header { padding-top: max(1rem, env(safe-area-inset-top)); }
+    #mobile-drawer { padding-top: env(safe-area-inset-top); }
+    #main-content { padding-bottom: calc(2.5rem + env(safe-area-inset-bottom)); }
+
+    @media (max-width: 767px) {
+      /* iOS zooms the page when a focused field is under 16px — kill that. */
+      .view-panel:not(#view-route) input[type="text"],
+      .view-panel:not(#view-route) select,
+      .view-panel:not(#view-route) textarea { font-size: 16px !important; }
+
+      /* Checklist cards: notes & photos fold away until tapped */
+      .cl-card:not(.expanded) .cl-details { display: none; }
+      .cl-toggle .cl-chev { transition: transform .2s ease; }
+      .cl-card.expanded .cl-toggle .cl-chev { transform: rotate(180deg); }
+
+      /* Overview sections: heatmap & filters fold into dropdowns */
+      .m-collapse .m-collapse-body { display: none; }
+      .m-collapse.open .m-collapse-body { display: block; }
+      .m-collapse .m-chev { transition: transform .2s ease; }
+      .m-collapse.open .m-chev { transform: rotate(180deg); }
+    }
+    @media (min-width: 768px) {
+      .cl-toggle { display: none; }
+      .cl-details { display: block !important; }
+      .m-collapse .m-collapse-body { display: block !important; }
+      .m-collapse-toggle { pointer-events: none; }
+      .m-collapse .m-chev { display: none; }
+    }
+    /* Overview cards render lazily off-screen — cheaper on long lists */
+    .ov-card { content-visibility: auto; contain-intrinsic-size: 220px; }
   </style>
 
   <!-- Route planner deps -->
@@ -103,6 +142,20 @@
 #view-route #map{height:460px;border-radius:12px;border:1px solid var(--line);z-index:0}
 
 @media(max-width:960px){#view-route #map{height:340px}}
+/* Phones: no inline map at all — a "View map" button opens it full-screen instead.
+   The map isn't even initialized until then (saves battery, memory and tile data). */
+#btnViewMap{display:none}
+@media(max-width:767px){
+  #view-route .maprow{display:none}
+  #btnViewMap{display:inline-flex;align-items:center;gap:6px}
+}
+#map-fullscreen{position:fixed;inset:0;z-index:10000;background:#0f1720;display:none;flex-direction:column}
+#map-fullscreen.open{display:flex}
+#map-fullscreen .mfs-top{display:flex;align-items:center;gap:10px;padding:max(10px, env(safe-area-inset-top)) 12px 10px;background:#16212e;border-bottom:1px solid #28384a;color:#e8eef5}
+#map-fullscreen .mfs-top h2{margin:0;font-size:15px;font-weight:800;flex:1}
+#map-fullscreen .mfs-back{background:#1c2a3a;color:#e8eef5;border:1px solid #28384a;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+#map-fullscreen .mfs-body{flex:1;min-height:0}
+#map-fullscreen #map{height:100% !important;border-radius:0 !important;border:none !important}
 #view-route .legend{display:flex;flex-wrap:wrap;gap:10px;margin:12px 0 4px;font-size:12px;color:var(--muted)}
 #view-route .legend span{display:inline-flex;align-items:center;gap:6px}
 #view-route .swatch{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(255,255,255,.15)}
@@ -268,7 +321,7 @@
     <div class="flex-1 flex flex-col relative h-full overflow-hidden bg-[#FCFAF7]">
       
       <!-- Premium Header -->
-      <header class="bg-white/90 backdrop-blur-md px-4 md:px-6 py-4 md:py-5 border-b border-neutral-100 flex items-center justify-between gap-2 shrink-0">
+      <header class="app-header bg-white/90 backdrop-blur-md px-4 md:px-6 py-4 md:py-5 border-b border-neutral-100 flex items-center justify-between gap-2 shrink-0">
         <div class="flex items-center gap-2 min-w-0">
           <button data-action="open-drawer" class="md:hidden p-2 -ml-1 rounded-xl hover:bg-neutral-100 active:scale-95 transition shrink-0" id="hamburger-btn" title="Menu" aria-label="Open menu">
             <i data-lucide="menu" class="w-6 h-6 text-neutral-800"></i>
@@ -436,7 +489,7 @@
             </button>
           </div>
 
-          <div id="facility-items-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+          <div id="facility-items-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5"></div>
 
           <div class="pt-4">
             <button data-action="next-facility" class="w-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-semibold py-4 rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
@@ -465,7 +518,7 @@
                 <h3 class="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-widest">Vital Equipment</h3>
                 <span id="vital-count" class="text-[10px] font-bold text-neutral-400 font-mono"></span>
               </div>
-              <div id="equipment-vital-list" class="grid grid-cols-1 gap-5"></div>
+              <div id="equipment-vital-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
             </div>
             <div class="space-y-3">
               <div class="flex items-center gap-2 sticky top-0 z-10 bg-[#FCFAF7]/95 backdrop-blur py-1">
@@ -473,7 +526,7 @@
                 <h3 class="text-xs font-extrabold text-neutral-500 uppercase tracking-widest">Less Vital &middot; If Time Allows</h3>
                 <span id="noncritical-count" class="text-[10px] font-bold text-neutral-400 font-mono"></span>
               </div>
-              <div id="equipment-noncritical-list" class="grid grid-cols-1 gap-5"></div>
+              <div id="equipment-noncritical-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
             </div>
           </div>
           <!-- legacy container kept hidden for any old references -->
@@ -513,16 +566,19 @@
             </div>
           </div>
 
-          <!-- Stores Fleet Heatmap -->
-          <div class="bg-white border border-orange-100/60 p-5 rounded-3xl space-y-4 shadow-sm">
-            <div>
+          <!-- Stores Fleet Heatmap (dropdown on mobile) -->
+          <div class="m-collapse bg-white border border-orange-100/60 p-5 rounded-3xl space-y-4 shadow-sm">
+            <button data-action="toggle-collapse" class="m-collapse-toggle w-full flex items-center justify-between text-left cursor-pointer">
               <h3 class="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-widest flex items-center gap-1.5">
                 <i data-lucide="map-pin" class="w-4 h-4 text-[#EA580C]"></i> Store Fleet Heatmap
               </h3>
-              <p class="text-[10px] text-neutral-400 mt-1">Tap a card to toggle filter focus on that store's records.</p>
-            </div>
-            <div id="overview-fleet-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-              <!-- Dynamic -->
+              <i data-lucide="chevron-down" class="m-chev w-4 h-4 text-neutral-400"></i>
+            </button>
+            <div class="m-collapse-body space-y-3 !mt-2">
+              <p class="text-[10px] text-neutral-400">Tap a card to toggle filter focus on that store's records.</p>
+              <div id="overview-fleet-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                <!-- Dynamic -->
+              </div>
             </div>
           </div>
 
@@ -536,14 +592,18 @@
             </div>
           </div>
 
-          <!-- Filter panel -->
-          <div class="bg-stone-50 border border-orange-100/30 p-4 rounded-3xl space-y-3 shadow-xs">
+          <!-- Filter panel (dropdown on mobile) -->
+          <div class="m-collapse bg-stone-50 border border-orange-100/30 p-4 rounded-3xl space-y-3 shadow-xs">
             <div class="flex items-center justify-between">
-              <span class="text-xs font-bold text-[#1E3A8A] uppercase tracking-wider">Search Filters</span>
+              <button data-action="toggle-collapse" class="m-collapse-toggle flex-1 flex items-center gap-2 text-left cursor-pointer">
+                <span class="text-xs font-bold text-[#1E3A8A] uppercase tracking-wider">Search Filters</span>
+                <i data-lucide="chevron-down" class="m-chev w-4 h-4 text-neutral-400"></i>
+              </button>
               <button data-action="reset-filters" class="text-xs text-[#EA580C] font-semibold hover:underline flex items-center justify-center gap-1 cursor-pointer">
                 <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Clear Filters
               </button>
             </div>
+            <div class="m-collapse-body space-y-3 !mt-2">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <select id="filter-store-select" class="w-full bg-white text-xs font-medium text-neutral-800 border border-neutral-200 rounded-xl px-3 py-2.5 cursor-pointer">
                 <option value="">All Store Locations</option>
@@ -557,6 +617,7 @@
               <button data-action="set-filter-tag" data-val="Good" id="filter-tag-good" class="text-xs font-bold py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition cursor-pointer">Good</button>
               <button data-action="set-filter-tag" data-val="Acceptable" id="filter-tag-acceptable" class="text-xs font-bold py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition cursor-pointer">Acceptable</button>
               <button data-action="set-filter-tag" data-val="Bad" id="filter-tag-bad" class="text-xs font-bold py-2 rounded-xl bg-white border border-neutral-200 text-neutral-700 hover:bg-neutral-50 transition cursor-pointer">Bad</button>
+            </div>
             </div>
           </div>
 
@@ -767,6 +828,7 @@
       <option value="day2">Day 2 only</option>
     </select>
     <span class="spacer"></span>
+    <button class="btn" id="btnViewMap" onclick="window.location.hash='#route-map'">🗺 View map</button>
     <span class="saveState" id="saveState">Synced to cloud</span>
     <button class="btn" id="btnExport">Export</button>
     <button class="btn" id="btnImport">Import</button>
@@ -806,6 +868,16 @@
     <div id="matching-results" class="space-y-4 text-sm"></div>
   </div>
 </div>
+<!-- Full-screen route map (mobile). The #map node is moved in here on open and
+     moved back on close so the same Leaflet instance is reused. -->
+<div id="map-fullscreen">
+  <div class="mfs-top">
+    <button class="mfs-back" onclick="window.location.hash='#route'">&larr; Back</button>
+    <h2>Route Map</h2>
+  </div>
+  <div class="mfs-body" id="map-fullscreen-body"></div>
+</div>
+
 <div id="route-store-modal" class="hidden fixed inset-0 z-[9999] items-center justify-center bg-black/50 p-4" style="backdrop-filter:blur(2px)">
   <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-5">
     <div class="space-y-1">
@@ -898,6 +970,10 @@
     window.updateOnlineStatus = updateOnlineStatus;
 
     // GLOBAL SYSTEM STATE
+    // Which checklist cards have their Notes & Photos section open on mobile.
+    // Lives outside window.state so it never syncs/serializes anywhere.
+    window.__expandedCards = {};
+
     window.state = {
       stores: [],
       facilityCategories: [],
@@ -1002,6 +1078,20 @@
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
     }
+
+    // ONE rule for the whole app: an item only counts as a real observation
+    // if it has a rating OR at least one photo. A photo with no rating counts
+    // as "Good". Everything else is an empty placeholder and never shows up.
+    function answerHasContent(d) {
+      if (!d) return false;
+      if (d.rating && String(d.rating).trim()) return true;
+      return !!(d.photos && d.photos.some(p => p && (p.url || p.localUrl)));
+    }
+    function answerEffectiveRating(d) {
+      return (d && d.rating && String(d.rating).trim()) ? d.rating : 'Good';
+    }
+    window.answerHasContent = answerHasContent;
+    window.answerEffectiveRating = answerEffectiveRating;
 
     function getClusterBadgeStyle(cluster) {
       if (!cluster) return '';
@@ -1561,7 +1651,7 @@
     // when the connection comes back.
     // =========================================================================
     const IMGBB_ENDPOINT = "https://api.imgbb.com/1/upload?key=b733862d15744e2bfaa4329d122f4ba0";
-    const MAX_CONCURRENT_UPLOADS = 2;
+    const MAX_CONCURRENT_UPLOADS = 3;
     const uploadQueue = [];
     let activeUploads = 0;
 
@@ -1707,6 +1797,7 @@
       if (files.length < fileList.length) {
         sendNotification(`Only ${remaining} photo slot(s) left — extra files were skipped.`, "info");
       }
+      window.__expandedCards[kind + '::' + itemName] = true; // keep progress visible
       files.forEach(file => {
         const id = uid();
         const localUrl = URL.createObjectURL(file);
@@ -2038,7 +2129,7 @@
                       <i data-lucide="x" class="w-3 h-3"></i>
                     </button>
                     <div class="relative">
-                      <img src="${src}" class="w-full h-20 object-cover rounded-lg cursor-zoom-in" data-action="open-lightbox" data-url="${src}" data-caption="${escapeHtml(p.caption || '')}" alt="Attached">
+                      <img src="${src}" loading="lazy" decoding="async" class="w-full h-20 object-cover rounded-lg cursor-zoom-in" data-action="open-lightbox" data-url="${src}" data-caption="${escapeHtml(p.caption || '')}" alt="Attached">
                       ${statusOverlay}
                     </div>
                     <select data-action="update-photo-tag" data-item="${escapeHtml(cat)}" data-photo-id="${escapeHtml(pid)}" class="w-full text-[9px] py-0.5 px-1 font-bold bg-white rounded border border-neutral-150 cursor-pointer">
@@ -2054,37 +2145,52 @@
           `;
         }
 
+        const cardKey = 'facility::' + cat;
+        const nPhotos = ans.photos ? ans.photos.length : 0;
+        const commentRequired = (ans.rating === 'Acceptable' || ans.rating === 'Bad');
+        const isExpanded = !!(window.__expandedCards && window.__expandedCards[cardKey])
+          || (commentRequired && !(ans.comment || '').trim())
+          || (ans.photos || []).some(p => p.status === 'failed');
+        const statusChip = ans.rating
+          ? (ans.rating === 'Good'
+              ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD</span>'
+              : ans.rating === 'Acceptable'
+                ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">ACCEPT</span>'
+                : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 shrink-0">BAD</span>')
+          : (nPhotos > 0
+              ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD (PHOTO)</span>'
+              : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200 shrink-0">&mdash;</span>');
         const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-3xl border border-orange-100/65 shadow-xs space-y-3";
+        card.className = "cl-card bg-white p-4 rounded-3xl border border-orange-100/65 shadow-xs space-y-3" + (isExpanded ? " expanded" : "");
         card.innerHTML = `
-          <div class="flex justify-between items-start">
-            <h3 class="text-sm font-bold text-slate-800 flex-1 pr-2 leading-tight">${cat}</h3>
-            <span class="text-[9px] font-bold text-orange-650 font-mono shrink-0">${ans.photos ? ans.photos.length : 0}/6 Photos</span>
+          <div class="flex justify-between items-start gap-2">
+            <h3 class="text-sm font-bold text-slate-800 flex-1 leading-tight">${cat}</h3>
+            ${statusChip}
           </div>
           <div class="grid grid-cols-3 gap-1.5 select-none text-center">
-            <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Good" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
-            <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Acceptable" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Acceptable' ? 'bg-amber-100 border-amber-300 text-amber-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Acceptable</button>
-            <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Bad" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Bad' ? 'bg-red-100 border-red-300 text-red-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Bad</button>
+            <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Good" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
+            <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Acceptable" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Acceptable' ? 'bg-amber-100 border-amber-300 text-amber-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Acceptable</button>
+            <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Bad" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Bad' ? 'bg-red-100 border-red-300 text-red-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Bad</button>
           </div>
-          <div class="flex items-center justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-widest px-1 pt-1">
-            <span>Comments & Notes</span>
-            ${(ans.rating === 'Acceptable' || ans.rating === 'Bad') ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
-          </div>
-          <textarea data-action="update-comment" data-kind="facility" data-item="${escapeHtml(cat)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
-          <div class="space-y-1.5">
-            <div class="grid grid-cols-2 gap-1.5">
-              <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
-                <i data-lucide="camera" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
-                <span class="text-[11px] text-neutral-700 font-bold leading-none">Take Photo</span>
-                <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}">
-              </label>
-              <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
-                <i data-lucide="image" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
-                <span class="text-[11px] text-neutral-700 font-bold leading-none">Upload Photos</span>
+          <button data-action="toggle-card-details" data-key="${escapeHtml(cardKey)}" class="cl-toggle w-full flex items-center justify-between px-1 py-1 text-[11px] font-bold text-neutral-500 uppercase tracking-widest cursor-pointer">
+            <span>Notes &amp; Photos ${nPhotos > 0 ? `<span class="text-orange-650 font-mono">(${nPhotos})</span>` : ''} ${commentRequired && !(ans.comment || '').trim() ? '<span class="text-red-500 normal-case animate-pulse">&middot; comment required</span>' : ''}</span>
+            <i data-lucide="chevron-down" class="cl-chev w-4 h-4"></i>
+          </button>
+          <div class="cl-details space-y-3">
+            <div class="hidden md:flex items-center justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-widest px-1">
+              <span>Comments &amp; Notes</span>
+              ${commentRequired ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
+            </div>
+            <textarea data-action="update-comment" data-kind="facility" data-item="${escapeHtml(cat)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
+            <div class="space-y-1.5">
+              <label class="flex items-center justify-center gap-2 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-2.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition">
+                <i data-lucide="camera" class="w-4 h-4 text-neutral-500 shrink-0"></i>
+                <span class="text-[11px] text-neutral-700 font-bold leading-none">Add Photos</span>
+                <span class="text-[10px] text-neutral-400 leading-none">camera or gallery &middot; ${nPhotos}/6</span>
                 <input type="file" accept="image/*" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}" multiple>
               </label>
+              ${photosHTML}
             </div>
-            ${photosHTML}
           </div>
         `;
         container.appendChild(card);
@@ -2169,7 +2275,7 @@
                     <i data-lucide="x" class="w-3 h-3"></i>
                   </button>
                   <div class="relative">
-                    <img src="${src}" class="w-full h-20 object-cover rounded-lg cursor-zoom-in" data-action="open-lightbox" data-url="${src}" data-caption="${escapeHtml(p.caption || '')}" alt="Attached">
+                    <img src="${src}" loading="lazy" decoding="async" class="w-full h-20 object-cover rounded-lg cursor-zoom-in" data-action="open-lightbox" data-url="${src}" data-caption="${escapeHtml(p.caption || '')}" alt="Attached">
                     ${statusOverlay}
                   </div>
                   <select data-action="update-photo-tag-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="w-full text-[9px] py-0.5 px-1 font-bold bg-white rounded border border-neutral-150 cursor-pointer">
@@ -2185,8 +2291,23 @@
         `;
       }
 
+      const cardKey = 'equipment::' + eq;
+      const nPhotos = ans.photos ? ans.photos.length : 0;
+      const commentRequired = (ans.rating === 'Acceptable' || ans.rating === 'Bad');
+      const isExpanded = !!(window.__expandedCards && window.__expandedCards[cardKey])
+        || (commentRequired && !(ans.comment || '').trim())
+        || (ans.photos || []).some(p => p.status === 'failed');
+      const statusChip = ans.rating
+        ? (ans.rating === 'Good'
+            ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD</span>'
+            : ans.rating === 'Acceptable'
+              ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">ACCEPT</span>'
+              : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 shrink-0">BAD</span>')
+        : (nPhotos > 0
+            ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD (PHOTO)</span>'
+            : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200 shrink-0">&mdash;</span>');
       const card = document.createElement('div');
-      card.className = "bg-white p-4 rounded-3xl border shadow-xs space-y-3 " + (isNon ? "border-neutral-200" : "border-orange-100/65");
+      card.className = "cl-card bg-white p-4 rounded-3xl border shadow-xs space-y-3 " + (isNon ? "border-neutral-200" : "border-orange-100/65") + (isExpanded ? " expanded" : "");
       const flagBtn = `
         <button data-action="toggle-equipment-critical" data-item="${escapeHtml(eq)}" title="${isNon ? 'Move to Vital' : 'Move to Less Vital'}"
           class="shrink-0 flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg border transition cursor-pointer ${isNon ? 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200' : 'bg-[#1E3A8A]/10 border-[#1E3A8A]/20 text-[#1E3A8A] hover:bg-[#1E3A8A]/15'}">
@@ -2195,42 +2316,39 @@
       card.innerHTML = `
         <div class="flex items-start justify-between gap-2">
           <h3 class="text-sm font-bold text-slate-800 flex-1 pr-1 leading-tight">${eq}</h3>
+          ${statusChip}
           ${flagBtn}
         </div>
-        <div class="flex items-center justify-between">
-          <span class="text-[9px] font-bold text-orange-650 font-mono shrink-0">${ans.photos ? ans.photos.length : 0}/3 Photos</span>
-          ${isNon ? '<span class="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Optional</span>' : ''}
-        </div>
         <div class="flex items-center justify-between gap-2">
-          <span class="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">Quantity Checked</span>
+          <span class="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">Quantity ${isNon ? '&middot; optional' : ''}</span>
           <select data-action="update-equipment-quantity" data-item="${escapeHtml(eq)}" class="bg-neutral-50 border border-neutral-200 text-xs font-bold px-2 py-1 rounded-xl cursor-pointer">
             ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${ans.quantity == n ? 'selected' : ''}>${n} Units</option>`).join('')}
           </select>
         </div>
         <div class="grid grid-cols-3 gap-1.5 select-none text-center">
-          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Good" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
-          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Acceptable" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Acceptable' ? 'bg-amber-100 border-amber-300 text-amber-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Acceptable</button>
-          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Bad" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Bad' ? 'bg-red-100 border-red-300 text-red-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Bad</button>
+          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Good" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
+          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Acceptable" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Acceptable' ? 'bg-amber-100 border-amber-300 text-amber-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Acceptable</button>
+          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Bad" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Bad' ? 'bg-red-100 border-red-300 text-red-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Bad</button>
         </div>
-        <div class="flex items-center justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-widest px-1 pt-1">
-          <span>Comments & Notes</span>
-          ${(ans.rating === 'Acceptable' || ans.rating === 'Bad') ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
-        </div>
-        <textarea data-action="update-comment" data-kind="equipment" data-item="${escapeHtml(eq)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
-        <div class="space-y-1.5">
-          <div class="grid grid-cols-2 gap-1.5">
-            <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
-              <i data-lucide="camera" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
-              <span class="text-[11px] text-neutral-700 font-bold leading-none">Take Photo</span>
-              <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}">
-            </label>
-            <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
-              <i data-lucide="image" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
-              <span class="text-[11px] text-neutral-700 font-bold leading-none">Upload Photos</span>
+        <button data-action="toggle-card-details" data-key="${escapeHtml(cardKey)}" class="cl-toggle w-full flex items-center justify-between px-1 py-1 text-[11px] font-bold text-neutral-500 uppercase tracking-widest cursor-pointer">
+          <span>Notes &amp; Photos ${nPhotos > 0 ? `<span class="text-orange-650 font-mono">(${nPhotos})</span>` : ''} ${commentRequired && !(ans.comment || '').trim() ? '<span class="text-red-500 normal-case animate-pulse">&middot; comment required</span>' : ''}</span>
+          <i data-lucide="chevron-down" class="cl-chev w-4 h-4"></i>
+        </button>
+        <div class="cl-details space-y-3">
+          <div class="hidden md:flex items-center justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-widest px-1">
+            <span>Comments &amp; Notes</span>
+            ${commentRequired ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
+          </div>
+          <textarea data-action="update-comment" data-kind="equipment" data-item="${escapeHtml(eq)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
+          <div class="space-y-1.5">
+            <label class="flex items-center justify-center gap-2 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-2.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition">
+              <i data-lucide="camera" class="w-4 h-4 text-neutral-500 shrink-0"></i>
+              <span class="text-[11px] text-neutral-700 font-bold leading-none">Add Photos</span>
+              <span class="text-[10px] text-neutral-400 leading-none">camera or gallery &middot; ${nPhotos}/3</span>
               <input type="file" accept="image/*" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}" multiple>
             </label>
+            ${photosHTML}
           </div>
-          ${photosHTML}
         </div>
       `;
       return card;
@@ -2258,11 +2376,12 @@
       if (insp.facility) {
         Object.entries(insp.facility).forEach(([key, ans]) => {
           const exists = window.state.facilityCategories.some(cat => cat.name === key);
-          if (exists && ans && ans.rating) {
+          if (exists && answerHasContent(ans)) {
             ratedCount++;
-            if (ans.rating === 'Bad') badCount++;
-            else if (ans.rating === 'Acceptable') acceptableCount++;
-            else if (ans.rating === 'Good') goodCount++;
+            const r = answerEffectiveRating(ans);
+            if (r === 'Bad') badCount++;
+            else if (r === 'Acceptable') acceptableCount++;
+            else goodCount++;
           }
         });
       }
@@ -2270,11 +2389,12 @@
       if (insp.equipment) {
         Object.entries(insp.equipment).forEach(([key, ans]) => {
           const exists = window.state.equipmentList.some(eq => eq.name === key);
-          if (exists && ans && ans.rating) {
+          if (exists && answerHasContent(ans)) {
             ratedCount++;
-            if (ans.rating === 'Bad') badCount++;
-            else if (ans.rating === 'Acceptable') acceptableCount++;
-            else if (ans.rating === 'Good') goodCount++;
+            const r = answerEffectiveRating(ans);
+            if (r === 'Bad') badCount++;
+            else if (r === 'Acceptable') acceptableCount++;
+            else goodCount++;
           }
         });
       }
@@ -2400,9 +2520,9 @@
 
       // An entry is only a real observation if it was rated OR has a photo.
       // Empty placeholder answers (created on load but never filled) are skipped.
-      // Photo-but-no-rating defaults to "Good".
-      const hasContent = (d) => !!(d && (d.rating || (d.photos && d.photos.length > 0)));
-      const effectiveRating = (d) => (d.rating && d.rating.trim()) ? d.rating : 'Good';
+      // Photo-but-no-rating defaults to "Good". (Shared rule — see helpers above.)
+      const hasContent = answerHasContent;
+      const effectiveRating = answerEffectiveRating;
 
       window.state.inspections.forEach((insp) => {
         if (selStore && insp.store !== selStore) return;
@@ -2438,7 +2558,7 @@
 
     function createOverviewCardHTML(insp, typeTag, targetName, data) {
       const card = document.createElement('div');
-      card.className = "bg-white p-5 rounded-3xl border border-neutral-100 shadow-sm space-y-3";
+      card.className = "ov-card bg-white p-5 rounded-3xl border border-neutral-100 shadow-sm space-y-3";
       
       let ratingPillColor = "bg-green-50 text-green-700 border-green-200 animate-pulse";
       if (data.rating === 'Acceptable') ratingPillColor = "bg-amber-50 text-amber-750 border-amber-200";
@@ -2455,7 +2575,7 @@
 
               return `
                 <div class="relative inline-block shrink-0">
-                  <img src="${p.url}" data-action="open-lightbox" data-url="${p.url}" data-caption="${escapeHtml(p.caption || '')}" class="w-16 h-16 object-cover rounded-xl border-2 ${border} ring-2 cursor-zoom-in" alt="photo thumbnail">
+                  <img src="${p.url}" loading="lazy" decoding="async" data-action="open-lightbox" data-url="${p.url}" data-caption="${escapeHtml(p.caption || '')}" class="w-16 h-16 object-cover rounded-xl border-2 ${border} ring-2 cursor-zoom-in" alt="photo thumbnail">
                   <span class="absolute bottom-1 right-1 px-1 bg-black/75 text-white rounded text-[7px] font-bold">${p.tag.toUpperCase()}</span>
                 </div>
               `;
@@ -2610,6 +2730,14 @@
 
     function syncHash() {
       const hash = window.location.hash.replace('#', '');
+      // #route-map = route view with the full-screen map open. Browser back
+      // (#route-map -> #route) closes the map naturally.
+      if (hash === 'route-map') {
+        navigate('route');
+        if (window.R_openMapOverlay) window.R_openMapOverlay();
+        return;
+      }
+      if (window.R_closeMapOverlay) window.R_closeMapOverlay();
       if (['landing', 'home', 'route', 'matching', 'store-select', 'facility', 'equipment', 'overview', 'settings'].includes(hash)) {
         navigate(hash);
       } else {
@@ -2810,10 +2938,24 @@
         );
       }
 
+      if (action === 'toggle-card-details') {
+        const key = target.getAttribute('data-key');
+        window.__expandedCards[key] = !window.__expandedCards[key];
+        const cardEl = target.closest('.cl-card');
+        if (cardEl) cardEl.classList.toggle('expanded', !!window.__expandedCards[key]);
+      }
+
+      if (action === 'toggle-collapse') {
+        const wrap = target.closest('.m-collapse');
+        if (wrap) wrap.classList.toggle('open');
+      }
+
       if (action === 'set-rating') {
         const curr = window.state.facilityAnswers[itemAttr];
         if (curr) {
           curr.rating = valAttr;
+          // A sub-Good rating needs a comment — pop the details open on mobile.
+          if (valAttr === 'Acceptable' || valAttr === 'Bad') window.__expandedCards['facility::' + itemAttr] = true;
           rerenderChecklistSoft();
           markDirty('facility', itemAttr);
           if (window.__maybeOfferDone) setTimeout(window.__maybeOfferDone, 150);
@@ -2882,6 +3024,7 @@
         const curr = window.state.equipmentAnswers[itemAttr];
         if (curr) {
           curr.rating = valAttr;
+          if (valAttr === 'Acceptable' || valAttr === 'Bad') window.__expandedCards['equipment::' + itemAttr] = true;
           rerenderChecklistSoft();
           markDirty('equipment', itemAttr);
           if (window.__maybeOfferDone) setTimeout(window.__maybeOfferDone, 150);
@@ -3833,13 +3976,46 @@ function R_commitOrderFromDOM(gk){
 // ---------- map (lazy: created when the route view first opens) ----------
 let R_map=null;
 let R_layerGroups={};
+function R_isPhone(){ return window.matchMedia('(max-width:767px)').matches; }
 function R_ensureMap(){
   if(R_map) return R_map;
+  // Phones: don't create the map (or download a single tile) until the
+  // full-screen viewer is actually opened — big battery/memory/data win.
+  if(R_isPhone() && !window.__mapOverlayOpen) return null;
   const el=document.getElementById('map'); if(!el) return null;
   R_map=L.map('map',{scrollWheelZoom:true}).setView([32.0,-96.0],7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(R_map);
   return R_map;
 }
+
+// ---- Full-screen map overlay (mobile). Reuses the one Leaflet instance by
+// physically moving the #map node between the page and the overlay. ----
+window.__mapOverlayOpen = false;
+window.R_openMapOverlay = function(){
+  const overlay=document.getElementById('map-fullscreen');
+  const body=document.getElementById('map-fullscreen-body');
+  const mapEl=document.getElementById('map');
+  if(!overlay||!body||!mapEl) return;
+  window.__mapOverlayOpen = true;
+  if(mapEl.parentElement!==body) body.appendChild(mapEl);
+  overlay.classList.add('open');
+  document.body.style.overflow='hidden';
+  setTimeout(()=>{
+    R_ensureMap();
+    if(R_map){ R_map.invalidateSize(); R_drawMap(); }
+  }, 60);
+};
+window.R_closeMapOverlay = function(){
+  const overlay=document.getElementById('map-fullscreen');
+  if(!overlay || !overlay.classList.contains('open')) return;
+  window.__mapOverlayOpen = false;
+  overlay.classList.remove('open');
+  document.body.style.overflow='';
+  const mapEl=document.getElementById('map');
+  const home=document.querySelector('#view-route .maprow');
+  if(mapEl && home && mapEl.parentElement!==home) home.insertBefore(mapEl, home.firstChild);
+  if(R_map) setTimeout(()=>R_map.invalidateSize(), 60);
+};
 function R_clearLayers(){ if(!R_map) return; Object.values(R_layerGroups).forEach(lg=>R_map.removeLayer(lg)); R_layerGroups={}; }
 
 function R_drawMap(){
@@ -4090,7 +4266,17 @@ function R_wireToolbarOnce(){
     }
   });
   let rzTimer=null;
-  window.addEventListener('resize',()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(R_realign,150); });
+  window.addEventListener('resize',()=>{ clearTimeout(rzTimer); rzTimer=setTimeout(()=>{
+    R_realign();
+    // Rotated/resized into desktop width while on the route page: bring the
+    // inline map up now (it was skipped on phone-sized loads).
+    const rv=document.getElementById('view-route');
+    if(!R_isPhone() && rv && !rv.classList.contains('hidden')){
+      const had=!!R_map;
+      R_ensureMap();
+      if(R_map){ R_map.invalidateSize(); if(!had) R_drawMap(); }
+    }
+  },150); });
 }
 
 // Called by the router when the Route page becomes visible.
