@@ -268,18 +268,26 @@
     <div class="flex-1 flex flex-col relative h-full overflow-hidden bg-[#FCFAF7]">
       
       <!-- Premium Header -->
-      <header class="bg-white/90 backdrop-blur-md px-6 py-5 border-b border-neutral-100 flex items-center justify-between shrink-0">
-        <div>
-          <h1 class="text-2xl font-bold tracking-tight text-neutral-900" id="header-title">DPM Acquisition Tracker</h1>
-          <p class="text-xs text-neutral-500 font-normal mt-0.5" id="header-subtitle">Field Auditor Hub</p>
+      <header class="bg-white/90 backdrop-blur-md px-4 md:px-6 py-4 md:py-5 border-b border-neutral-100 flex items-center justify-between gap-2 shrink-0">
+        <div class="flex items-center gap-2 min-w-0">
+          <button data-action="open-drawer" class="md:hidden p-2 -ml-1 rounded-xl hover:bg-neutral-100 active:scale-95 transition shrink-0" id="hamburger-btn" title="Menu" aria-label="Open menu">
+            <i data-lucide="menu" class="w-6 h-6 text-neutral-800"></i>
+          </button>
+          <button data-action="mobile-back" class="hidden p-2 -ml-1 rounded-xl hover:bg-neutral-100 active:scale-95 transition shrink-0" id="mobile-back-btn" title="Back" aria-label="Go back">
+            <i data-lucide="arrow-left" class="w-6 h-6 text-neutral-800"></i>
+          </button>
+          <div class="min-w-0">
+            <h1 class="text-lg md:text-2xl font-bold tracking-tight text-neutral-900 truncate" id="header-title">DPM Acquisition Tracker</h1>
+            <p class="text-[11px] md:text-xs text-neutral-500 font-normal mt-0.5 truncate" id="header-subtitle">Field Auditor Hub</p>
+          </div>
         </div>
-        <button data-action="go-home" class="p-2.5 rounded-full hover:bg-neutral-100 transition active:scale-95 flex items-center justify-center gap-1 bg-neutral-50/50 border border-neutral-200" id="header-home-btn" title="Home">
+        <button data-action="go-home" class="p-2.5 rounded-full hover:bg-neutral-100 transition active:scale-95 flex items-center justify-center gap-1 bg-neutral-50/50 border border-neutral-200 shrink-0" id="header-home-btn" title="Home">
           <i data-lucide="home" class="w-5 h-5 text-neutral-800"></i>
         </button>
       </header>
 
       <!-- MAIN VIEWS -->
-      <main class="flex-1 overflow-y-auto px-6 py-6 pb-24" id="main-content">
+      <main class="flex-1 overflow-y-auto px-4 md:px-6 py-5 md:py-6 pb-10" id="main-content">
       
         <!-- VIEW: HOME -->
         <div id="view-landing" class="view-panel">
@@ -450,7 +458,26 @@
             </button>
           </div>
 
-          <div id="equipment-items-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"></div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            <div class="space-y-3">
+              <div class="flex items-center gap-2 sticky top-0 z-10 bg-[#FCFAF7]/95 backdrop-blur py-1">
+                <span class="p-1 bg-[#1E3A8A] text-white rounded-lg flex items-center justify-center"><i data-lucide="zap" class="w-3.5 h-3.5"></i></span>
+                <h3 class="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-widest">Vital Equipment</h3>
+                <span id="vital-count" class="text-[10px] font-bold text-neutral-400 font-mono"></span>
+              </div>
+              <div id="equipment-vital-list" class="grid grid-cols-1 gap-5"></div>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-center gap-2 sticky top-0 z-10 bg-[#FCFAF7]/95 backdrop-blur py-1">
+                <span class="p-1 bg-neutral-400 text-white rounded-lg flex items-center justify-center"><i data-lucide="clock" class="w-3.5 h-3.5"></i></span>
+                <h3 class="text-xs font-extrabold text-neutral-500 uppercase tracking-widest">Less Vital &middot; If Time Allows</h3>
+                <span id="noncritical-count" class="text-[10px] font-bold text-neutral-400 font-mono"></span>
+              </div>
+              <div id="equipment-noncritical-list" class="grid grid-cols-1 gap-5"></div>
+            </div>
+          </div>
+          <!-- legacy container kept hidden for any old references -->
+          <div id="equipment-items-list" class="hidden"></div>
 
           <div id="equipment-finish-container" class="pt-4">
             <button data-action="finish-equipment" class="w-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-semibold py-4 rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
@@ -675,24 +702,29 @@
       </div>
 
       <!-- IOS Navigation Bottom Hub -->
-      <nav class="md:hidden flex h-16 items-center justify-around absolute bottom-0 left-0 right-0 z-30 bg-[#1E3A8A] border-t border-white/5 px-2 select-none">
-        <button data-action="route" data-route="home" class="flex flex-col items-center gap-1 text-orange-400 font-bold transition justify-center" id="nav-btn-home">
-          <i data-lucide="home" class="w-5 h-5"></i>
-          <span class="text-[10px]">Home</span>
-        </button>
-        <button data-action="route" data-route="store-select" class="flex flex-col items-center gap-1 text-[#D9E2EC]/70 hover:text-white transition justify-center" id="nav-btn-store-select">
-          <i data-lucide="plus-circle" class="w-5 h-5"></i>
-          <span class="text-[10px]">Inspect</span>
-        </button>
-        <button data-action="route" data-route="overview" class="flex flex-col items-center gap-1 text-[#D9E2EC]/70 hover:text-white transition justify-center" id="nav-btn-overview">
-          <i data-lucide="search" class="w-5 h-5"></i>
-          <span class="text-[10px]">Overview</span>
-        </button>
-        <button data-action="route" data-route="settings" class="flex flex-col items-center gap-1 text-[#D9E2EC]/70 hover:text-white transition justify-center" id="nav-btn-settings">
-          <i data-lucide="sliders" class="w-5 h-5"></i>
-          <span class="text-[10px]">Settings</span>
-        </button>
-      </nav>
+      <!-- Mobile slide-in drawer + scrim (replaces bottom nav) -->
+      <div id="drawer-scrim" class="md:hidden hidden fixed inset-0 bg-black/50 z-40 transition-opacity" data-action="close-drawer"></div>
+      <aside id="mobile-drawer" class="md:hidden fixed top-0 left-0 bottom-0 w-72 max-w-[80%] bg-[#1E3A8A] z-50 flex flex-col text-white shadow-2xl transition-transform duration-300 -translate-x-full">
+        <div class="p-6 border-b border-white/10 flex items-center justify-between">
+          <h2 class="text-lg font-extrabold tracking-tight flex items-center gap-2.5">
+            <span class="p-1.5 bg-[#EA580C] rounded-xl flex items-center justify-center"><i data-lucide="shield-check" class="w-5 h-5"></i></span>
+            DPM Field
+          </h2>
+          <button data-action="close-drawer" class="p-1.5 rounded-lg hover:bg-white/10 active:scale-95" aria-label="Close menu"><i data-lucide="x" class="w-5 h-5"></i></button>
+        </div>
+        <nav class="flex-1 overflow-y-auto p-4 space-y-1.5">
+          <button data-action="route" data-route="landing" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-landing"><i data-lucide="home" class="w-5 h-5"></i> Home Hub</button>
+          <button data-action="route" data-route="route" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-route"><i data-lucide="map" class="w-5 h-5"></i> Route Guidance</button>
+          <button data-action="route" data-route="store-select" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-store-select"><i data-lucide="clipboard-check" class="w-5 h-5"></i> Start Inspection</button>
+          <button data-action="route" data-route="overview" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-overview"><i data-lucide="bar-chart-3" class="w-5 h-5"></i> Field Reports</button>
+          <button data-action="route" data-route="matching" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-matching"><i data-lucide="git-compare" class="w-5 h-5"></i> Store Matching</button>
+          <button data-action="route" data-route="settings" class="drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm" id="drawer-btn-settings"><i data-lucide="settings" class="w-5 h-5"></i> Settings</button>
+        </nav>
+        <div class="p-4 border-t border-white/10 flex items-center gap-2 text-[11px] text-[#D9E2EC]/70">
+          <span id="drawer-status-dot" class="w-1.5 h-1.5 bg-green-400 rounded-full"></span>
+          <span id="drawer-status-text">Live sync active</span>
+        </div>
+      </aside>
     </div>
   </div>
 
@@ -1040,7 +1072,7 @@
       onSnapshot(collection(db, "equipmentList"), (snap) => {
         const raw = snap.docs.map(d => {
           const x = d.data();
-          return { id: d.id, name: x.name, order: typeof x.order === 'number' ? x.order : null };
+          return { id: d.id, name: x.name, order: typeof x.order === 'number' ? x.order : null, noncritical: !!x.noncritical };
         });
         window.state.equipmentList = sortOrderedList(raw);
         renderOverviewItemFilters();
@@ -1225,6 +1257,7 @@
       }
       if (mode === 'equipment' || mode === 'both') {
         st.equipmentList.forEach(c => {
+          if (c.noncritical) return; // optional items don't block "done"
           const a = st.equipmentAnswers[c.name];
           if (!a || !a.rating) allRated = false;
         });
@@ -1920,11 +1953,20 @@
               `;
             }
           } else {
+            const isEquip = (targetCollection === 'equipmentList');
+            const isNon = isEquip && !!item.noncritical;
             row.innerHTML = `
-              <div class="flex items-center gap-2 flex-1 mr-4">
-                <span class="text-xs font-bold text-neutral-850">${escapeHtml(item.name)}</span>
+              <div class="flex items-center gap-2 flex-1 mr-4 min-w-0">
+                <span class="text-xs font-bold text-neutral-850 truncate">${escapeHtml(item.name)}</span>
+                ${isNon ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-neutral-200 text-neutral-500 shrink-0">Less vital</span>' : ''}
               </div>
               <div class="flex items-center gap-1 shrink-0">
+                ${isEquip ? `
+                <button data-action="toggle-equipment-critical" data-item="${escapeHtml(item.name)}" class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg border transition cursor-pointer ${isNon ? 'bg-[#1E3A8A]/10 border-[#1E3A8A]/20 text-[#1E3A8A] hover:bg-[#1E3A8A]/15' : 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200'}" title="${isNon ? 'Mark as vital' : 'Mark as less vital'}">
+                  ${isNon ? 'Make vital' : 'Less vital'}
+                </button>
+                <div class="w-px h-4 bg-neutral-200 mx-1"></div>
+                ` : ''}
                 <button data-action="reorder-item-up" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Up">
                   <i data-lucide="chevron-up" class="w-4 h-4"></i>
                 </button>
@@ -2052,114 +2094,146 @@
     }
 
     function renderEquipmentChecklist() {
-      const container = document.getElementById('equipment-items-list');
-      if (!container) return;
-      container.innerHTML = '';
+      const vitalList = document.getElementById('equipment-vital-list');
+      const nonList = document.getElementById('equipment-noncritical-list');
+      if (!vitalList || !nonList) return;
+      vitalList.innerHTML = '';
+      nonList.innerHTML = '';
 
       if (window.state.equipmentList.length === 0) {
-        container.innerHTML = `
-          <div class="col-span-full p-8 text-center text-neutral-400 space-y-3 flex flex-col items-center justify-center">
+        vitalList.innerHTML = `
+          <div class="p-8 text-center text-neutral-400 space-y-3 flex flex-col items-center justify-center">
             <p class="text-xs font-medium">Verify your configuration equipment inside Settings first.</p>
           </div>
         `;
         return;
       }
 
+      let vitalN = 0, nonN = 0;
       window.state.equipmentList.forEach((eqObj) => {
         const eq = eqObj.name;
+        const isNon = !!eqObj.noncritical;
         if (!window.state.equipmentAnswers[eq]) {
           window.state.equipmentAnswers[eq] = { quantity: 1, rating: '', comment: '', photos: [] };
         }
-        const ans = window.state.equipmentAnswers[eq];
-
-        let commentPlaceholder = "Optional comments & notes...";
-        if (ans.rating === 'Acceptable') commentPlaceholder = "Why didn't you rate this Good?";
-        else if (ans.rating === 'Bad') commentPlaceholder = "Why wasn't this Acceptable?";
-
-        let photosHTML = '';
-        if (ans.photos && ans.photos.length > 0) {
-          photosHTML = `
-            <div class="grid grid-cols-2 gap-2.5 pt-2.5">
-              ${ans.photos.map((p) => {
-                const pid = p.id || p.url;
-                let border = "border-green-600";
-                if (p.tag === 'Acceptable') border = "border-amber-500";
-                if (p.tag === 'Bad') border = "border-red-650";
-                const src = p.localUrl || p.url;
-                const isPending = (p.status === 'queued' || p.status === 'uploading');
-                const isFailed = (p.status === 'failed');
-                let statusOverlay = '';
-                if (isPending) {
-                  statusOverlay = `<div class="absolute inset-0 bg-black/45 rounded-lg flex flex-col items-center justify-center gap-1 z-10 pointer-events-none"><div class="spinner"></div><span class="text-[8px] font-extrabold text-white uppercase tracking-widest">Uploading…</span></div>`;
-                } else if (isFailed) {
-                  statusOverlay = `<button data-action="retry-photo-upload" data-kind="equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="absolute inset-0 bg-red-900/70 rounded-lg flex flex-col items-center justify-center gap-1 z-10 cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4 text-white"></i><span class="text-[8px] font-extrabold text-white uppercase tracking-widest">Failed — Retry</span></button>`;
-                }
-
-                return `
-                  <div class="bg-neutral-50 p-2 rounded-xl relative border-2 ${border} flex flex-col gap-1.5 shadow-2xs">
-                    <button data-action="delete-photo-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="absolute -top-2 -right-2 bg-neutral-900 text-white rounded-full p-1 shadow hover:bg-red-650 transition z-20 w-5 h-5 flex items-center justify-center cursor-pointer">
-                      <i data-lucide="x" class="w-3 h-3"></i>
-                    </button>
-                    <div class="relative">
-                      <img src="${src}" class="w-full h-20 object-cover rounded-lg cursor-zoom-in" data-action="open-lightbox" data-url="${src}" data-caption="${escapeHtml(p.caption || '')}" alt="Attached">
-                      ${statusOverlay}
-                    </div>
-                    <select data-action="update-photo-tag-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="w-full text-[9px] py-0.5 px-1 font-bold bg-white rounded border border-neutral-150 cursor-pointer">
-                      <option value="Good" ${p.tag === 'Good' ? 'selected' : ''}>Good</option>
-                      <option value="Acceptable" ${p.tag === 'Acceptable' ? 'selected' : ''}>Acceptable</option>
-                      <option value="Bad" ${p.tag === 'Bad' ? 'selected' : ''}>Bad</option>
-                    </select>
-                    <input type="text" data-action="update-photo-caption-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" placeholder="Caption note" value="${escapeHtml(p.caption || '')}" class="w-full text-[9px] bg-white border border-neutral-200 rounded px-1.5 py-0.5 font-medium">
-                  </div>
-                `;
-              }).join('')}
-            </div>
-          `;
-        }
-
-        const card = document.createElement('div');
-        card.className = "bg-white p-4 rounded-3xl border border-orange-100/65 shadow-xs space-y-3";
-        card.innerHTML = `
-          <div class="flex items-start justify-between">
-            <h3 class="text-sm font-bold text-slate-800 flex-1 pr-2 leading-tight">${eq}</h3>
-            <span class="text-[9px] font-bold text-orange-650 font-mono shrink-0">${ans.photos ? ans.photos.length : 0}/3 Photos</span>
-          </div>
-          <div class="flex items-center justify-between gap-2">
-            <span class="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">Quantity Checked</span>
-            <select data-action="update-equipment-quantity" data-item="${escapeHtml(eq)}" class="bg-neutral-50 border border-neutral-200 text-xs font-bold px-2 py-1 rounded-xl cursor-pointer">
-              ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${ans.quantity == n ? 'selected' : ''}>${n} Units</option>`).join('')}
-            </select>
-          </div>
-          <div class="grid grid-cols-3 gap-1.5 select-none text-center">
-            <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Good" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
-            <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Acceptable" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Acceptable' ? 'bg-amber-100 border-amber-300 text-amber-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Acceptable</button>
-            <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Bad" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Bad' ? 'bg-red-100 border-red-300 text-red-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Bad</button>
-          </div>
-          <div class="flex items-center justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-widest px-1 pt-1">
-            <span>Comments & Notes</span>
-            ${(ans.rating === 'Acceptable' || ans.rating === 'Bad') ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
-          </div>
-          <textarea data-action="update-comment" data-kind="equipment" data-item="${escapeHtml(eq)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
-          <div class="space-y-1.5">
-            <div class="grid grid-cols-2 gap-1.5">
-              <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
-                <i data-lucide="camera" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
-                <span class="text-[11px] text-neutral-700 font-bold leading-none">Take Photo</span>
-                <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}">
-              </label>
-              <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
-                <i data-lucide="image" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
-                <span class="text-[11px] text-neutral-700 font-bold leading-none">Upload Photos</span>
-                <input type="file" accept="image/*" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}" multiple>
-              </label>
-            </div>
-            ${photosHTML}
-          </div>
-        `;
-        container.appendChild(card);
+        const card = buildEquipmentCard(eqObj);
+        if (isNon) { nonList.appendChild(card); nonN++; }
+        else { vitalList.appendChild(card); vitalN++; }
       });
 
+      const vc = document.getElementById('vital-count');
+      const nc = document.getElementById('noncritical-count');
+      if (vc) vc.textContent = vitalN ? `(${vitalN})` : '';
+      if (nc) nc.textContent = nonN ? `(${nonN})` : '';
+      if (vitalN === 0) {
+        vitalList.innerHTML = `<div class="p-6 text-center text-neutral-300 text-[11px] font-medium border border-dashed border-neutral-200 rounded-2xl">No vital items \u2014 everything is marked less-vital.</div>`;
+      }
+      if (nonN === 0) {
+        nonList.innerHTML = `<div class="p-6 text-center text-neutral-300 text-[11px] font-medium border border-dashed border-neutral-200 rounded-2xl">No less-vital items. Use the flag on a card to move it here.</div>`;
+      }
+
       if (window.lucide) lucide.createIcons();
+    }
+
+    // Builds one equipment inspection card (used by both columns).
+    function buildEquipmentCard(eqObj) {
+      const eq = eqObj.name;
+      const isNon = !!eqObj.noncritical;
+      const ans = window.state.equipmentAnswers[eq];
+
+      let commentPlaceholder = "Optional comments & notes...";
+      if (ans.rating === 'Acceptable') commentPlaceholder = "Why didn't you rate this Good?";
+      else if (ans.rating === 'Bad') commentPlaceholder = "Why wasn't this Acceptable?";
+
+      let photosHTML = '';
+      if (ans.photos && ans.photos.length > 0) {
+        photosHTML = `
+          <div class="grid grid-cols-2 gap-2.5 pt-2.5">
+            ${ans.photos.map((p) => {
+              const pid = p.id || p.url;
+              let border = "border-green-600";
+              if (p.tag === 'Acceptable') border = "border-amber-500";
+              if (p.tag === 'Bad') border = "border-red-650";
+              const src = p.localUrl || p.url;
+              const isPending = (p.status === 'queued' || p.status === 'uploading');
+              const isFailed = (p.status === 'failed');
+              let statusOverlay = '';
+              if (isPending) {
+                statusOverlay = `<div class="absolute inset-0 bg-black/45 rounded-lg flex flex-col items-center justify-center gap-1 z-10 pointer-events-none"><div class="spinner"></div><span class="text-[8px] font-extrabold text-white uppercase tracking-widest">Uploading…</span></div>`;
+              } else if (isFailed) {
+                statusOverlay = `<button data-action="retry-photo-upload" data-kind="equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="absolute inset-0 bg-red-900/70 rounded-lg flex flex-col items-center justify-center gap-1 z-10 cursor-pointer"><i data-lucide="refresh-cw" class="w-4 h-4 text-white"></i><span class="text-[8px] font-extrabold text-white uppercase tracking-widest">Failed — Retry</span></button>`;
+              }
+              return `
+                <div class="bg-neutral-50 p-2 rounded-xl relative border-2 ${border} flex flex-col gap-1.5 shadow-2xs">
+                  <button data-action="delete-photo-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="absolute -top-2 -right-2 bg-neutral-900 text-white rounded-full p-1 shadow hover:bg-red-650 transition z-20 w-5 h-5 flex items-center justify-center cursor-pointer">
+                    <i data-lucide="x" class="w-3 h-3"></i>
+                  </button>
+                  <div class="relative">
+                    <img src="${src}" class="w-full h-20 object-cover rounded-lg cursor-zoom-in" data-action="open-lightbox" data-url="${src}" data-caption="${escapeHtml(p.caption || '')}" alt="Attached">
+                    ${statusOverlay}
+                  </div>
+                  <select data-action="update-photo-tag-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" class="w-full text-[9px] py-0.5 px-1 font-bold bg-white rounded border border-neutral-150 cursor-pointer">
+                    <option value="Good" ${p.tag === 'Good' ? 'selected' : ''}>Good</option>
+                    <option value="Acceptable" ${p.tag === 'Acceptable' ? 'selected' : ''}>Acceptable</option>
+                    <option value="Bad" ${p.tag === 'Bad' ? 'selected' : ''}>Bad</option>
+                  </select>
+                  <input type="text" data-action="update-photo-caption-equipment" data-item="${escapeHtml(eq)}" data-photo-id="${escapeHtml(pid)}" placeholder="Caption note" value="${escapeHtml(p.caption || '')}" class="w-full text-[9px] bg-white border border-neutral-200 rounded px-1.5 py-0.5 font-medium">
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `;
+      }
+
+      const card = document.createElement('div');
+      card.className = "bg-white p-4 rounded-3xl border shadow-xs space-y-3 " + (isNon ? "border-neutral-200" : "border-orange-100/65");
+      const flagBtn = `
+        <button data-action="toggle-equipment-critical" data-item="${escapeHtml(eq)}" title="${isNon ? 'Move to Vital' : 'Move to Less Vital'}"
+          class="shrink-0 flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg border transition cursor-pointer ${isNon ? 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200' : 'bg-[#1E3A8A]/10 border-[#1E3A8A]/20 text-[#1E3A8A] hover:bg-[#1E3A8A]/15'}">
+          <i data-lucide="${isNon ? 'arrow-up' : 'arrow-down'}" class="w-3 h-3"></i>${isNon ? 'Vital' : 'Less'}
+        </button>`;
+      card.innerHTML = `
+        <div class="flex items-start justify-between gap-2">
+          <h3 class="text-sm font-bold text-slate-800 flex-1 pr-1 leading-tight">${eq}</h3>
+          ${flagBtn}
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-[9px] font-bold text-orange-650 font-mono shrink-0">${ans.photos ? ans.photos.length : 0}/3 Photos</span>
+          ${isNon ? '<span class="text-[9px] font-bold text-neutral-400 uppercase tracking-wider">Optional</span>' : ''}
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">Quantity Checked</span>
+          <select data-action="update-equipment-quantity" data-item="${escapeHtml(eq)}" class="bg-neutral-50 border border-neutral-200 text-xs font-bold px-2 py-1 rounded-xl cursor-pointer">
+            ${[1,2,3,4,5,6,7,8,9,10].map(n => `<option value="${n}" ${ans.quantity == n ? 'selected' : ''}>${n} Units</option>`).join('')}
+          </select>
+        </div>
+        <div class="grid grid-cols-3 gap-1.5 select-none text-center">
+          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Good" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
+          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Acceptable" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Acceptable' ? 'bg-amber-100 border-amber-300 text-amber-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Acceptable</button>
+          <button data-action="set-equipment-rating" data-item="${escapeHtml(eq)}" data-val="Bad" class="py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Bad' ? 'bg-red-100 border-red-300 text-red-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Bad</button>
+        </div>
+        <div class="flex items-center justify-between text-[11px] font-bold text-neutral-500 uppercase tracking-widest px-1 pt-1">
+          <span>Comments & Notes</span>
+          ${(ans.rating === 'Acceptable' || ans.rating === 'Bad') ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
+        </div>
+        <textarea data-action="update-comment" data-kind="equipment" data-item="${escapeHtml(eq)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
+        <div class="space-y-1.5">
+          <div class="grid grid-cols-2 gap-1.5">
+            <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
+              <i data-lucide="camera" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
+              <span class="text-[11px] text-neutral-700 font-bold leading-none">Take Photo</span>
+              <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}">
+            </label>
+            <label class="flex items-center justify-center gap-1.5 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-1.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition truncate">
+              <i data-lucide="image" class="w-3.5 h-3.5 text-neutral-500 shrink-0"></i>
+              <span class="text-[11px] text-neutral-700 font-bold leading-none">Upload Photos</span>
+              <input type="file" accept="image/*" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}" multiple>
+            </label>
+          </div>
+          ${photosHTML}
+        </div>
+      `;
+      return card;
     }
 
     function getStoreStatus(storeName) {
@@ -2205,12 +2279,17 @@
         });
       }
 
+      // Non-critical ("less vital") equipment is optional: it doesn't count toward
+      // the expected total (so skipping it doesn't lower the %), but if an inspector
+      // DOES rate it, that still counts in ratedCount above — it can only help.
+      const vitalEquipmentCount = window.state.equipmentList.filter(e => !e.noncritical).length;
       let expectedCount = 0;
       if (insp.mode === 'facility') expectedCount = window.state.facilityCategories.length;
-      else if (insp.mode === 'equipment') expectedCount = window.state.equipmentList.length;
-      else expectedCount = window.state.facilityCategories.length + window.state.equipmentList.length;
+      else if (insp.mode === 'equipment') expectedCount = vitalEquipmentCount;
+      else expectedCount = window.state.facilityCategories.length + vitalEquipmentCount;
       if (expectedCount === 0) expectedCount = 1;
 
+      // ratedCount can exceed expectedCount if optional items were also rated; cap the %.
       const percent = Math.min(100, Math.round((ratedCount / expectedCount) * 100));
 
       let healthClass = 'bg-white border-neutral-200 hover:bg-neutral-55';
@@ -2319,26 +2398,36 @@
         }
       });
 
+      // An entry is only a real observation if it was rated OR has a photo.
+      // Empty placeholder answers (created on load but never filled) are skipped.
+      // Photo-but-no-rating defaults to "Good".
+      const hasContent = (d) => !!(d && (d.rating || (d.photos && d.photos.length > 0)));
+      const effectiveRating = (d) => (d.rating && d.rating.trim()) ? d.rating : 'Good';
+
       window.state.inspections.forEach((insp) => {
         if (selStore && insp.store !== selStore) return;
 
         if (insp.facility) {
           Object.keys(insp.facility).forEach((categoryName) => {
             const data = insp.facility[categoryName];
+            if (!hasContent(data)) return;
+            const shown = { ...data, rating: effectiveRating(data) };
             if (selCatQuery && !categoryName.toLowerCase().includes(selCatQuery)) return;
-            if (selTag && data.rating !== selTag) return;
+            if (selTag && shown.rating !== selTag) return;
             matchCount++;
-            container.appendChild(createOverviewCardHTML(insp, 'Facility', categoryName, data));
+            container.appendChild(createOverviewCardHTML(insp, 'Facility', categoryName, shown));
           });
         }
 
         if (insp.equipment) {
           Object.keys(insp.equipment).forEach((equipName) => {
             const data = insp.equipment[equipName];
+            if (!hasContent(data)) return;
+            const shown = { ...data, rating: effectiveRating(data) };
             if (selCatQuery && !equipName.toLowerCase().includes(selCatQuery)) return;
-            if (selTag && data.rating !== selTag) return;
+            if (selTag && shown.rating !== selTag) return;
             matchCount++;
-            container.appendChild(createOverviewCardHTML(insp, 'Equipment', equipName, data));
+            container.appendChild(createOverviewCardHTML(insp, 'Equipment', equipName, shown));
           });
         }
       });
@@ -2449,19 +2538,24 @@
       const activePanel = document.getElementById(`view-${viewName}`);
       if (activePanel) activePanel.classList.remove('hidden');
 
-      ['home', 'store-select', 'overview', 'settings'].forEach(route => {
-        const btn = document.getElementById(`nav-btn-${route}`);
-        if (btn) {
-          if (route === viewName) btn.className = "flex flex-col items-center gap-1 text-orange-400 font-bold transition justify-center";
-          else btn.className = "flex flex-col items-center gap-1 text-[#D9E2EC]/70 hover:text-white transition justify-center";
+      ['landing', 'route', 'home', 'store-select', 'overview', 'matching', 'settings'].forEach(route => {
+        const dBtn = document.getElementById(`drawer-btn-${route}`);
+        if (dBtn) {
+          if (route === viewName) dBtn.className = "drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold transition text-sm";
+          else dBtn.className = "drawer-link w-full flex items-center gap-3.5 px-4 py-3.5 rounded-2xl text-[#D9E2EC] hover:bg-white/10 transition font-semibold text-sm";
         }
-
         const deskBtn = document.getElementById(`nav-desk-btn-${route}`);
         if (deskBtn) {
           if (route === viewName) deskBtn.className = "w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-white bg-[#EA580C] font-bold shadow-md transition";
           else deskBtn.className = "w-full flex items-center gap-3.5 px-4.5 py-3.5 rounded-2xl text-[#D9E2EC] hover:text-white hover:bg-white/10 transition font-semibold";
         }
       });
+
+      // Mobile: show the back button (and hide hamburger) on any page that has a
+      // logical parent; on top-level pages show the hamburger instead.
+      updateMobileNavButtons(viewName);
+      // Close the drawer whenever we navigate.
+      closeDrawer();
 
       if (viewName === 'store-select') renderStoreSelections();
       else if (viewName === 'facility') renderFacilityChecklist();
@@ -2474,6 +2568,45 @@
       window.scrollTo(0, 0);
     }
     window.navigate = navigate;
+
+    // ---- Mobile drawer + back-button logic ----
+    // Logical parent for the back button (returns to a sensible place, not raw history).
+    const VIEW_PARENTS = {
+      'route': 'landing',
+      'store-select': 'landing',
+      'facility': 'store-select',
+      'equipment': 'store-select',
+      'overview': 'landing',
+      'matching': 'landing',
+      'settings': 'landing',
+      'home': 'landing'
+    };
+    function updateMobileNavButtons(viewName) {
+      const back = document.getElementById('mobile-back-btn');
+      const burger = document.getElementById('hamburger-btn');
+      const hasParent = !!VIEW_PARENTS[viewName];
+      if (back && burger) {
+        if (hasParent) { back.classList.remove('hidden'); burger.classList.add('hidden'); }
+        else { back.classList.add('hidden'); burger.classList.remove('hidden'); }
+      }
+    }
+    function openDrawer() {
+      const d = document.getElementById('mobile-drawer');
+      const s = document.getElementById('drawer-scrim');
+      if (d) d.classList.remove('-translate-x-full');
+      if (s) s.classList.remove('hidden');
+    }
+    function closeDrawer() {
+      const d = document.getElementById('mobile-drawer');
+      const s = document.getElementById('drawer-scrim');
+      if (d) d.classList.add('-translate-x-full');
+      if (s) s.classList.add('hidden');
+    }
+    window.__mobileBack = function () {
+      const cur = window.state.currentView;
+      const parent = VIEW_PARENTS[cur] || 'landing';
+      window.location.hash = '#' + parent;
+    };
 
     function syncHash() {
       const hash = window.location.hash.replace('#', '');
@@ -2752,6 +2885,22 @@
           rerenderChecklistSoft();
           markDirty('equipment', itemAttr);
           if (window.__maybeOfferDone) setTimeout(window.__maybeOfferDone, 150);
+        }
+      }
+
+      if (action === 'toggle-equipment-critical') {
+        const eqObj = window.state.equipmentList.find(e => e.name === itemAttr);
+        if (eqObj) {
+          const newVal = !eqObj.noncritical;
+          eqObj.noncritical = newVal;      // optimistic local update
+          renderEquipmentChecklist();       // reflow columns immediately
+          if (window.state.currentView === 'settings') renderSettingsItems();
+          try {
+            await setDoc(doc(db, "equipmentList", eqObj.id), { noncritical: newVal }, { merge: true });
+          } catch (e) {
+            console.error("toggle critical failed", e);
+            sendNotification("Couldn't save that change — check connection.", "error");
+          }
         }
       }
 
