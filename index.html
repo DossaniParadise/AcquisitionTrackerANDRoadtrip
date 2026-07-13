@@ -102,6 +102,16 @@
     }
     /* Overview cards render lazily off-screen — cheaper on long lists */
     .ov-card { content-visibility: auto; contain-intrinsic-size: 220px; }
+
+    /* Vital (green, knob right) / less-vital (red, knob left) switch */
+    .eq-switch { position: relative; width: 34px; height: 19px; border-radius: 9999px;
+      background: #16a34a; border: none; cursor: pointer; flex: 0 0 auto;
+      transition: background .15s ease; padding: 0; }
+    .eq-switch .eq-knob { position: absolute; top: 2px; left: 17px; width: 15px; height: 15px;
+      border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.35);
+      transition: left .15s ease; }
+    .eq-switch.eq-off { background: #dc2626; }
+    .eq-switch.eq-off .eq-knob { left: 2px; }
   </style>
 
   <!-- Route planner deps -->
@@ -142,12 +152,45 @@
 #view-route #map{height:460px;border-radius:12px;border:1px solid var(--line);z-index:0}
 
 @media(max-width:960px){#view-route #map{height:340px}}
-/* Phones: no inline map at all — a "View map" button opens it full-screen instead.
-   The map isn't even initialized until then (saves battery, memory and tile data). */
+/* The itineraries are the page; the map is opt-in everywhere.
+   Desktop: a Show/Hide map toggle reveals the inline map. Phones: a "View map"
+   button opens it full-screen. Either way the map (and its tile downloads)
+   isn't initialized until first shown — saves battery, memory and data. */
+#view-route .maprow{display:none}
+#view-route .maprow.show{display:block}
 #btnViewMap{display:none}
 @media(max-width:767px){
-  #view-route .maprow{display:none}
+  #view-route .maprow{display:none !important}
   #btnViewMap{display:inline-flex;align-items:center;gap:6px}
+  #btnMapToggle{display:none}
+}
+/* ---- Printable itinerary ---- */
+#print-sheet{display:none}
+#print-modal{position:fixed;inset:0;z-index:10001;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px}
+#print-modal.open{display:flex}
+#print-modal .pm-box{background:#fff;color:#111;border-radius:16px;max-width:760px;width:100%;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+#print-modal .pm-top{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid #e5e5e5}
+#print-modal .pm-top h2{margin:0;font-size:15px;font-weight:800;flex:1;color:#1E3A8A}
+#print-modal .pm-btn{border:none;border-radius:10px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
+#print-modal .pm-print{background:#1E3A8A;color:#fff}
+#print-modal .pm-close{background:#eee;color:#333}
+#print-modal .pm-body{overflow-y:auto;padding:16px}
+.print-table{width:100%;border-collapse:collapse;font-family:Georgia,'Times New Roman',serif;font-size:13px;color:#000;margin-bottom:22px}
+.print-table th,.print-table td{border:1px solid #000;padding:4px 8px;text-align:center}
+.print-table .pt-group{background:#E8862E;font-weight:700;font-size:14px;padding:5px}
+.print-table .pt-day{background:#A6A6A6;font-weight:700;padding:3px}
+.print-table th{background:#fff;font-weight:700}
+.print-table td.pt-loc{text-align:center}
+.print-table tr.pt-drive td.pt-loc{background:#FDE9D9}
+.print-table tr.pt-visit td.pt-loc{background:#FFF6D5}
+.print-table .pt-note{font-family:inherit;font-size:11px;text-align:left;border:none;padding:2px 0 8px;color:#333}
+@media print{
+  body.printing *{visibility:hidden !important}
+  body.printing #print-sheet, body.printing #print-sheet *{visibility:visible !important}
+  body.printing #print-sheet{display:block !important;position:absolute;left:0;top:0;width:100%;background:#fff;padding:0;margin:0}
+  .print-table{-webkit-print-color-adjust:exact;print-color-adjust:exact;page-break-inside:auto}
+  .print-table tr{page-break-inside:avoid}
+  @page{margin:12mm}
 }
 #map-fullscreen{position:fixed;inset:0;z-index:10000;background:#0f1720;display:none;flex-direction:column}
 #map-fullscreen.open{display:flex}
@@ -505,7 +548,7 @@
             </button>
           </div>
 
-          <div id="facility-items-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-5"></div>
+          <div id="facility-items-list" class="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-5"></div>
 
           <div class="pt-4">
             <button data-action="next-facility" class="w-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-semibold py-4 rounded-2xl transition active:scale-95 flex items-center justify-center gap-2 cursor-pointer">
@@ -620,12 +663,15 @@
               </button>
             </div>
             <div class="m-collapse-body space-y-3 !mt-2">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <select id="filter-store-select" class="w-full bg-white text-xs font-medium text-neutral-800 border border-neutral-200 rounded-xl px-3 py-2.5 cursor-pointer">
                 <option value="">All Store Locations</option>
               </select>
-              <select id="filter-category-select" class="w-full bg-white text-xs font-medium text-neutral-800 border border-neutral-200 rounded-xl px-3 py-2.5 cursor-pointer">
-                <option value="">All Item Names</option>
+              <select id="filter-facility-select" class="w-full bg-white text-xs font-medium text-neutral-800 border border-neutral-200 rounded-xl px-3 py-2.5 cursor-pointer">
+                <option value="">All Facility Categories</option>
+              </select>
+              <select id="filter-equipment-select" class="w-full bg-white text-xs font-medium text-neutral-800 border border-neutral-200 rounded-xl px-3 py-2.5 cursor-pointer">
+                <option value="">All Equipment Items</option>
               </select>
             </div>
             <div class="grid grid-cols-4 gap-2 text-center select-none">
@@ -848,12 +894,17 @@
     </select>
     <span class="spacer"></span>
     <button class="btn" id="btnViewMap" onclick="window.location.hash='#route-map'">🗺 View map</button>
+    <button class="btn" id="btnMapToggle">🗺 Show map</button>
+    <button class="btn" id="btnPrint">🖨 Print</button>
     <span class="saveState" id="saveState">Synced to cloud</span>
     <button class="btn" id="btnExport">Export</button>
     <button class="btn" id="btnImport">Import</button>
     <input type="file" id="importFile" accept="application/json,.json" style="display:none">
     <button class="btn ghost" id="btnReset">Reset all</button>
   </div>
+
+  <div class="rotate-hint">↻ Rotate your phone to landscape to see both groups side by side.</div>
+  <div id="schedules"></div>
 
   <div class="maprow">
     <div id="map"></div>
@@ -867,9 +918,6 @@
     </div>
     <div class="status" id="routeStatus">Loading road routes from OSRM&hellip;</div>
   </div>
-
-  <div class="rotate-hint">↻ Rotate your phone to landscape to see both groups side by side.</div>
-  <div id="schedules"></div>
 </div>
 
 
@@ -896,6 +944,19 @@
   </div>
   <div class="mfs-body" id="map-fullscreen-body"></div>
 </div>
+
+<!-- Printable itinerary: preview modal + the sheet that actually prints -->
+<div id="print-modal">
+  <div class="pm-box">
+    <div class="pm-top">
+      <h2>Printable Itinerary</h2>
+      <button class="pm-btn pm-print" onclick="window.R_doPrint && window.R_doPrint()">Print</button>
+      <button class="pm-btn pm-close" onclick="window.R_closePrintModal && window.R_closePrintModal()">Close</button>
+    </div>
+    <div class="pm-body" id="print-preview"></div>
+  </div>
+</div>
+<div id="print-sheet"></div>
 
 <div id="route-store-modal" class="hidden fixed inset-0 z-[9999] items-center justify-center bg-black/50 p-4" style="backdrop-filter:blur(2px)">
   <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-5">
@@ -1018,7 +1079,10 @@
       
       // Dashboard filter caches
       filterStore: '',
-      filterCategory: '',
+      filterFacility: '',
+      filterEquipment: '',
+      filterFacility: '',
+      filterEquipment: '',
       filterTag: '',
     };
 
@@ -1897,22 +1961,22 @@
     }
 
     function renderOverviewItemFilters() {
-      const select = document.getElementById('filter-category-select');
-      if (!select) return;
-      select.innerHTML = '<option value="">All Item Names</option>';
-      
-      const items = new Set();
-      window.state.facilityCategories.forEach(c => { if (c.name) items.add(c.name.trim()); });
-      window.state.equipmentList.forEach(e => { if (e.name) items.add(e.name.trim()); });
-      
-      const sortedNames = Array.from(items).sort((a, b) => a.localeCompare(b));
-      sortedNames.forEach(name => {
-        const opt = document.createElement('option');
-        opt.value = name;
-        opt.innerText = name;
-        opt.selected = (name === window.state.filterCategory);
-        select.appendChild(opt);
-      });
+      const fill = (selectId, list, current, placeholder) => {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        select.innerHTML = `<option value="">${placeholder}</option>`;
+        const items = new Set();
+        list.forEach(c => { if (c.name) items.add(c.name.trim()); });
+        Array.from(items).sort((a, b) => a.localeCompare(b)).forEach(name => {
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.innerText = name;
+          opt.selected = (name === current);
+          select.appendChild(opt);
+        });
+      };
+      fill('filter-facility-select', window.state.facilityCategories, window.state.filterFacility, 'All Facility Categories');
+      fill('filter-equipment-select', window.state.equipmentList, window.state.filterEquipment, 'All Equipment Items');
     }
 
     function renderSettingsItems() {
@@ -2333,13 +2397,13 @@
       const card = document.createElement('div');
       card.className = "cl-card bg-white p-4 rounded-3xl border shadow-xs space-y-3 " + (isNon ? "border-neutral-200" : "border-orange-100/65") + (isExpanded ? " expanded" : "");
       const flagBtn = `
-        <button data-action="toggle-equipment-critical" data-item="${escapeHtml(eq)}" title="${isNon ? 'Move to Vital' : 'Move to Less Vital'}"
-          class="shrink-0 flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg border transition cursor-pointer ${isNon ? 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200' : 'bg-[#1E3A8A]/10 border-[#1E3A8A]/20 text-[#1E3A8A] hover:bg-[#1E3A8A]/15'}">
-          <i data-lucide="${isNon ? 'arrow-up' : 'arrow-down'}" class="w-3 h-3"></i>${isNon ? 'Vital' : 'Less'}
-        </button>`;
+        <span class="shrink-0 flex items-center gap-1.5" title="${isNon ? 'Less vital — tap to make vital' : 'Vital — tap to make less vital'}">
+          <span class="text-[8px] font-extrabold uppercase tracking-wider ${isNon ? 'text-red-500' : 'text-green-600'}">${isNon ? 'Less' : 'Vital'}</span>
+          <button data-action="toggle-equipment-critical" data-item="${escapeHtml(eq)}" role="switch" aria-checked="${!isNon}" aria-label="Vital equipment toggle for ${escapeHtml(eq)}" class="eq-switch ${isNon ? 'eq-off' : ''}"><span class="eq-knob pointer-events-none"></span></button>
+        </span>`;
       card.innerHTML = `
         <div class="flex items-start justify-between gap-2">
-          <h3 class="text-sm font-bold text-slate-800 flex-1 pr-1 leading-tight">${eq}</h3>
+          <h3 class="text-sm font-bold text-slate-800 flex-1 pr-1 leading-tight break-words">${eq}</h3>
           ${statusChip}
           ${flagBtn}
         </div>
@@ -2514,7 +2578,8 @@
 
       let matchCount = 0;
       const selStore = window.state.filterStore;
-      const selCatQuery = window.state.filterCategory.toLowerCase().trim();
+      const selFac = (window.state.filterFacility || '').toLowerCase().trim();
+      const selEq = (window.state.filterEquipment || '').toLowerCase().trim();
       const selTag = window.state.filterTag;
 
       ['all', 'good', 'acceptable', 'bad'].forEach(tag => {
@@ -2551,12 +2616,16 @@
       window.state.inspections.forEach((insp) => {
         if (selStore && insp.store !== selStore) return;
 
+        // Combo filters stack (AND): store + facility/equipment + condition.
+        // A facility pick alone hides equipment entries and vice versa; picking
+        // one of each shows both, each narrowed to its selection.
         if (insp.facility) {
           Object.keys(insp.facility).forEach((categoryName) => {
             const data = insp.facility[categoryName];
             if (!hasContent(data)) return;
+            if (selEq && !selFac) return; // equipment-only filter active
+            if (selFac && !categoryName.toLowerCase().includes(selFac)) return;
             const shown = { ...data, rating: effectiveRating(data) };
-            if (selCatQuery && !categoryName.toLowerCase().includes(selCatQuery)) return;
             if (selTag && shown.rating !== selTag) return;
             matchCount++;
             container.appendChild(createOverviewCardHTML(insp, 'Facility', categoryName, shown));
@@ -2567,8 +2636,9 @@
           Object.keys(insp.equipment).forEach((equipName) => {
             const data = insp.equipment[equipName];
             if (!hasContent(data)) return;
+            if (selFac && !selEq) return; // facility-only filter active
+            if (selEq && !equipName.toLowerCase().includes(selEq)) return;
             const shown = { ...data, rating: effectiveRating(data) };
-            if (selCatQuery && !equipName.toLowerCase().includes(selCatQuery)) return;
             if (selTag && shown.rating !== selTag) return;
             matchCount++;
             container.appendChild(createOverviewCardHTML(insp, 'Equipment', equipName, shown));
@@ -3430,13 +3500,13 @@
       }
 
       if (action === 'reset-filters') {
-        const stS = document.getElementById('filter-store-select');
-        const catS = document.getElementById('filter-category-select');
-        if (stS) stS.value = "";
-        if (catS) catS.value = "";
-        
+        ['filter-store-select', 'filter-facility-select', 'filter-equipment-select'].forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.value = "";
+        });
         window.state.filterStore = "";
-        window.state.filterCategory = "";
+        window.state.filterFacility = "";
+        window.state.filterEquipment = "";
         window.state.filterTag = "";
         renderOverviewCardsList();
         sendNotification("All search criteria cleared", "success");
@@ -3539,8 +3609,13 @@
         renderOverviewCardsList();
       }
 
-      if (e.target.id === 'filter-category-select') {
-        window.state.filterCategory = e.target.value;
+      if (e.target.id === 'filter-facility-select') {
+        window.state.filterFacility = e.target.value;
+        renderOverviewCardsList();
+      }
+
+      if (e.target.id === 'filter-equipment-select') {
+        window.state.filterEquipment = e.target.value;
         renderOverviewCardsList();
       }
 
@@ -3635,7 +3710,7 @@
 </script>
 <script>/* Route planner module (adapted for Firebase) */
 
-const R_PRESETS = {"presets": {"separate": {"parties": {"groupA": {"label": "Group A \u2014 Armaan & Usman (Grapevine)", "stops": [{"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_0"}, {"name": "Copperas Cove", "addr": "1001 East Highway 190, Copperas Cove, TX 76522", "lat": 31.1204224, "lng": -97.8931716, "kind": "store", "_id": "groupA_1"}, {"name": "Clear Creek (Killeen)", "addr": "2902 Clear Creek, Killeen, TX 76549", "lat": 31.1081186, "lng": -97.8010413, "kind": "store", "_id": "groupA_2"}, {"name": "West Stan (Killeen)", "addr": "1105 W. Stan Schlueter Loop, Killeen, TX 76549", "lat": 31.0800779, "lng": -97.7616618, "kind": "store", "_id": "groupA_3"}, {"name": "Fort Hood (Killeen)", "addr": "1029 S Fort Hood St, Killeen, TX 76541", "lat": 31.1117404, "lng": -97.7471337, "kind": "store", "_id": "groupA_4"}, {"name": "Rancier (Killeen)", "addr": "505 East Rancier, Killeen, TX 76541", "lat": 31.1252523, "lng": -97.7228155, "kind": "store", "_id": "groupA_5"}, {"name": "Stan (Killeen)", "addr": "3809 E. Stan Schlueter Loop, Killeen, TX 76542", "lat": 31.0719884, "lng": -97.7095775, "kind": "store", "_id": "groupA_6"}, {"name": "Harker Heights", "addr": "680 E Knights Way, Harker Heights, TX 76548", "lat": 31.0587236, "lng": -97.661126, "kind": "store", "_id": "groupA_7"}, {"name": "Belton", "addr": "206 N. IH-35 Belton, TX 76513", "lat": 31.0215065, "lng": -97.4769954, "kind": "store", "_id": "groupA_8"}, {"name": "Best Western Temple Inn & Suites", "addr": "602 N General Bruce Dr, Temple, TX 76504", "lat": 31.1086969, "lng": -97.3584341, "kind": "hotel", "_id": "groupA_9"}, {"name": "Temple 31st", "addr": "2110 S. 31st St Suite 120, Temple, TX 76504", "lat": 31.0801639, "lng": -97.3659744, "kind": "store", "_id": "groupA_10"}, {"name": "North Temple", "addr": "4405 N. General Bruce Drive, Temple, TX 76501", "lat": 31.1406888, "lng": -97.3278837, "kind": "store", "_id": "groupA_11"}, {"name": "Hewitt (Waco)", "addr": "1601 Hewitt Drive, Waco, TX 76712", "lat": 31.4813032, "lng": -97.2080858, "kind": "store", "_id": "groupA_12"}, {"name": "New Road (Waco)", "addr": "2401 S. New Road, Waco, TX 76711", "lat": 31.5082489, "lng": -97.144856, "kind": "store", "_id": "groupA_13"}, {"name": "Valley Mills (Waco)", "addr": "1210 N. Valley Mills Dr., Waco, TX 76710", "lat": 31.530439, "lng": -97.1886823, "kind": "store", "_id": "groupA_14"}, {"name": "Lakeshore (Waco)", "addr": "103 E. Loop 340, Waco, TX 76705", "lat": 31.603975, "lng": -97.107982, "kind": "store", "_id": "groupA_15"}, {"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_16"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "602 N General Bruce Dr, Temple, TX 76504"}, "groupB": {"label": "Group B \u2014 Karim & Steve (Plano)", "stops": [{"name": "Plano Coit", "addr": "2009 Coit Rd, Plano, TX 75075", "lat": 33.0283818, "lng": -96.7707069, "kind": "home", "_id": "groupB_0"}, {"name": "Canton", "addr": "575 E State Highway 243, Canton, TX 75103", "lat": 32.5450543, "lng": -95.8557903, "kind": "store", "_id": "groupB_1"}, {"name": "Athens", "addr": "1004 East Tyler St, Athens, TX 75751", "lat": 32.2052538, "lng": -95.8383086, "kind": "store", "_id": "groupB_2"}, {"name": "Palestine", "addr": "2901 S. Loop 256, Palestine, TX 75801", "lat": 31.7340322, "lng": -95.6258271, "kind": "store", "_id": "groupB_3"}, {"name": "Jacksonville", "addr": "505 East Rusk St, Jacksonville, TX 75766", "lat": 31.964, "lng": -95.2669, "kind": "store", "_id": "groupB_4"}, {"name": "Crockett", "addr": "940 E Loop 304, Crockett, TX 75835", "lat": 31.3274505, "lng": -95.4397698, "kind": "store", "_id": "groupB_5"}, {"name": "Hampton", "addr": "5100 E End Blvd S, Marshall, TX 75672", "lat": 32.4977059, "lng": -94.3564667, "kind": "hotel", "_id": "groupB_6"}, {"name": "Waskom", "addr": "825 Spur 156, Waskom, TX 75692", "lat": 32.4697287, "lng": -94.0562723, "kind": "store", "_id": "groupB_7"}, {"name": "Eastman (Longview)", "addr": "3306 S. Eastman Rd, Longview, TX 75602", "lat": 32.4517169, "lng": -94.7078858, "kind": "store", "_id": "groupB_8"}, {"name": "Marshall (Longview)", "addr": "701 W. Marshall Ave, Longview, TX 75601", "lat": 32.5000234, "lng": -94.7499075, "kind": "store", "_id": "groupB_9"}, {"name": "Loop 281 (Longview)", "addr": "1623 W. Loop 281, Longview, TX 75604", "lat": 32.5270918, "lng": -94.7799441, "kind": "store", "_id": "groupB_10"}, {"name": "McCann (Longview)", "addr": "3511 McCann Rd, Longview, TX 75605", "lat": 32.5398472, "lng": -94.7548195, "kind": "store", "_id": "groupB_11"}, {"name": "Plano Coit", "addr": "2009 Coit Rd, Plano, TX 75075", "lat": 33.0283818, "lng": -96.7707069, "kind": "home", "_id": "groupB_12"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "5100 E End Blvd S, Marshall, TX 75672"}}, "view": "all", "version": 2}, "shared": {"parties": {"groupA": {"label": "Group A \u2014 Armaan & Usman (Grapevine)", "stops": [{"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_0"}, {"name": "Copperas Cove", "addr": "1001 East Highway 190, Copperas Cove, TX 76522", "lat": 31.1204224, "lng": -97.8931716, "kind": "store", "_id": "groupA_1"}, {"name": "Clear Creek (Killeen)", "addr": "2902 Clear Creek, Killeen, TX 76549", "lat": 31.1081186, "lng": -97.8010413, "kind": "store", "_id": "groupA_2"}, {"name": "West Stan (Killeen)", "addr": "1105 W. Stan Schlueter Loop, Killeen, TX 76549", "lat": 31.0800779, "lng": -97.7616618, "kind": "store", "_id": "groupA_3"}, {"name": "Fort Hood (Killeen)", "addr": "1029 S Fort Hood St, Killeen, TX 76541", "lat": 31.1117404, "lng": -97.7471337, "kind": "store", "_id": "groupA_4"}, {"name": "Rancier (Killeen)", "addr": "505 East Rancier, Killeen, TX 76541", "lat": 31.1252523, "lng": -97.7228155, "kind": "store", "_id": "groupA_5"}, {"name": "Stan (Killeen)", "addr": "3809 E. Stan Schlueter Loop, Killeen, TX 76542", "lat": 31.0719884, "lng": -97.7095775, "kind": "store", "_id": "groupA_6"}, {"name": "Harker Heights", "addr": "680 E Knights Way, Harker Heights, TX 76548", "lat": 31.0587236, "lng": -97.661126, "kind": "store", "_id": "groupA_7"}, {"name": "Belton", "addr": "206 N. IH-35 Belton, TX 76513", "lat": 31.0215065, "lng": -97.4769954, "kind": "store", "_id": "groupA_8"}, {"name": "Hotel Corsicana", "addr": "623 Bryant's Way, Corsicana, TX 75109", "lat": 32.0718587, "lng": -96.4417145, "kind": "hotel", "_id": "groupA_9"}, {"name": "Temple 31st", "addr": "2110 S. 31st St Suite 120, Temple, TX 76504", "lat": 31.0801639, "lng": -97.3659744, "kind": "store", "_id": "groupA_10"}, {"name": "North Temple", "addr": "4405 N. General Bruce Drive, Temple, TX 76501", "lat": 31.1406888, "lng": -97.3278837, "kind": "store", "_id": "groupA_11"}, {"name": "Hewitt (Waco)", "addr": "1601 Hewitt Drive, Waco, TX 76712", "lat": 31.4813032, "lng": -97.2080858, "kind": "store", "_id": "groupA_12"}, {"name": "New Road (Waco)", "addr": "2401 S. New Road, Waco, TX 76711", "lat": 31.5082489, "lng": -97.144856, "kind": "store", "_id": "groupA_13"}, {"name": "Valley Mills (Waco)", "addr": "1210 N. Valley Mills Dr., Waco, TX 76710", "lat": 31.530439, "lng": -97.1886823, "kind": "store", "_id": "groupA_14"}, {"name": "Lakeshore (Waco)", "addr": "103 E. Loop 340, Waco, TX 76705", "lat": 31.603975, "lng": -97.107982, "kind": "store", "_id": "groupA_15"}, {"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_16"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "623 Bryant's Way, Corsicana, TX 75109"}, "groupB": {"label": "Group B \u2014 Karim & Steve (Plano)", "stops": [{"name": "Plano Coit", "addr": "2009 Coit Rd, Plano, TX 75075", "lat": 33.0283818, "lng": -96.7707069, "kind": "home", "_id": "groupB_0"}, {"name": "Canton", "addr": "575 E State Highway 243, Canton, TX 75103", "lat": 32.5450543, "lng": -95.8557903, "kind": "store", "_id": "groupB_1"}, {"name": "Athens", "addr": "1004 East Tyler St, Athens, TX 75751", "lat": 32.2052538, "lng": -95.8383086, "kind": "store", "_id": "groupB_2"}, {"name": "Palestine", "addr": "2901 S. Loop 256, Palestine, TX 75801", "lat": 31.7340322, "lng": -95.6258271, "kind": "store", "_id": "groupB_3"}, {"name": "Jacksonville", "addr": "505 East Rusk St, Jacksonville, TX 75766", "lat": 31.964, "lng": -95.2669, "kind": "store", "_id": "groupB_4"}, {"name": "Crockett", "addr": "940 E Loop 304, Crockett, TX 75835", "lat": 31.3274505, "lng": -95.4397698, "kind": "store", "_id": "groupB_5"}, {"name": "Hotel Corsicana", "addr": "623 Bryant's Way, Corsicana, TX 75109", "lat": 32.0718587, "lng": -96.4417145, "kind": "hotel", "_id": "groupB_6"}, {"name": "Waskom", "addr": "825 Spur 156, Waskom, TX 75692", "lat": 32.4697287, "lng": -94.0562723, "kind": "store", "_id": "groupB_7"}, {"name": "Eastman (Longview)", "addr": "3306 S. Eastman Rd, Longview, TX 75602", "lat": 32.4517169, "lng": -94.7078858, "kind": "store", "_id": "groupB_8"}, {"name": "Marshall (Longview)", "addr": "701 W. Marshall Ave, Longview, TX 75601", "lat": 32.5000234, "lng": -94.7499075, "kind": "store", "_id": "groupB_9"}, {"name": "Loop 281 (Longview)", "addr": "1623 W. Loop 281, Longview, TX 75604", "lat": 32.5270918, "lng": -94.7799441, "kind": "store", "_id": "groupB_10"}, {"name": "McCann (Longview)", "addr": "3511 McCann Rd, Longview, TX 75605", "lat": 32.5398472, "lng": -94.7548195, "kind": "store", "_id": "groupB_11"}, {"name": "Plano Coit", "addr": "2009 Coit Rd, Plano, TX 75075", "lat": 33.0283818, "lng": -96.7707069, "kind": "home", "_id": "groupB_12"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "623 Bryant's Way, Corsicana, TX 75109"}}, "view": "all", "version": 2}}, "sharedHotelAddr": "623 Bryant's Way, Corsicana, TX 75109", "sharedHotel": {"name": "Hotel Corsicana", "addr": "623 Bryant's Way, Corsicana, TX 75109", "lat": 32.0718587, "lng": -96.4417145}};
+const R_PRESETS = {"presets": {"separate": {"parties": {"groupA": {"label": "Group A \u2014 Armaan & Usman (Grapevine)", "stops": [{"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_0"}, {"name": "Copperas Cove", "addr": "1001 East Highway 190, Copperas Cove, TX 76522", "lat": 31.1204224, "lng": -97.8931716, "kind": "store", "_id": "groupA_1"}, {"name": "Clear Creek (Killeen)", "addr": "2902 Clear Creek, Killeen, TX 76549", "lat": 31.1081186, "lng": -97.8010413, "kind": "store", "_id": "groupA_2"}, {"name": "West Stan (Killeen)", "addr": "1105 W. Stan Schlueter Loop, Killeen, TX 76549", "lat": 31.0800779, "lng": -97.7616618, "kind": "store", "_id": "groupA_3"}, {"name": "Fort Hood (Killeen)", "addr": "1029 S Fort Hood St, Killeen, TX 76541", "lat": 31.1117404, "lng": -97.7471337, "kind": "store", "_id": "groupA_4"}, {"name": "Rancier (Killeen)", "addr": "505 East Rancier, Killeen, TX 76541", "lat": 31.1252523, "lng": -97.7228155, "kind": "store", "_id": "groupA_5"}, {"name": "Stan (Killeen)", "addr": "3809 E. Stan Schlueter Loop, Killeen, TX 76542", "lat": 31.0719884, "lng": -97.7095775, "kind": "store", "_id": "groupA_6"}, {"name": "Harker Heights", "addr": "680 E Knights Way, Harker Heights, TX 76548", "lat": 31.0587236, "lng": -97.661126, "kind": "store", "_id": "groupA_7"}, {"name": "Belton", "addr": "206 N. IH-35 Belton, TX 76513", "lat": 31.0215065, "lng": -97.4769954, "kind": "store", "_id": "groupA_8"}, {"name": "Best Western Temple Inn & Suites", "addr": "602 N General Bruce Dr, Temple, TX 76504", "lat": 31.1086969, "lng": -97.3584341, "kind": "hotel", "_id": "groupA_9"}, {"name": "Temple 31st", "addr": "2110 S. 31st St Suite 120, Temple, TX 76504", "lat": 31.0801639, "lng": -97.3659744, "kind": "store", "_id": "groupA_10"}, {"name": "North Temple", "addr": "4405 N. General Bruce Drive, Temple, TX 76501", "lat": 31.1406888, "lng": -97.3278837, "kind": "store", "_id": "groupA_11"}, {"name": "Hewitt (Waco)", "addr": "1601 Hewitt Drive, Waco, TX 76712", "lat": 31.4813032, "lng": -97.2080858, "kind": "store", "_id": "groupA_12"}, {"name": "New Road (Waco)", "addr": "2401 S. New Road, Waco, TX 76711", "lat": 31.5082489, "lng": -97.144856, "kind": "store", "_id": "groupA_13"}, {"name": "Valley Mills (Waco)", "addr": "1210 N. Valley Mills Dr., Waco, TX 76710", "lat": 31.530439, "lng": -97.1886823, "kind": "store", "_id": "groupA_14"}, {"name": "Lakeshore (Waco)", "addr": "103 E. Loop 340, Waco, TX 76705", "lat": 31.603975, "lng": -97.107982, "kind": "store", "_id": "groupA_15"}, {"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_16"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "602 N General Bruce Dr, Temple, TX 76504"}, "groupB": {"label": "Group B \u2014 Karim & Steve (Grapevine)", "stops": [{"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupB_0"}, {"name": "Canton", "addr": "575 E State Highway 243, Canton, TX 75103", "lat": 32.5450543, "lng": -95.8557903, "kind": "store", "_id": "groupB_1"}, {"name": "Athens", "addr": "1004 East Tyler St, Athens, TX 75751", "lat": 32.2052538, "lng": -95.8383086, "kind": "store", "_id": "groupB_2"}, {"name": "Palestine", "addr": "2901 S. Loop 256, Palestine, TX 75801", "lat": 31.7340322, "lng": -95.6258271, "kind": "store", "_id": "groupB_3"}, {"name": "Jacksonville", "addr": "505 East Rusk St, Jacksonville, TX 75766", "lat": 31.964, "lng": -95.2669, "kind": "store", "_id": "groupB_4"}, {"name": "Crockett", "addr": "940 E Loop 304, Crockett, TX 75835", "lat": 31.3274505, "lng": -95.4397698, "kind": "store", "_id": "groupB_5"}, {"name": "Hampton", "addr": "5100 E End Blvd S, Marshall, TX 75672", "lat": 32.4977059, "lng": -94.3564667, "kind": "hotel", "_id": "groupB_6"}, {"name": "Waskom", "addr": "825 Spur 156, Waskom, TX 75692", "lat": 32.4697287, "lng": -94.0562723, "kind": "store", "_id": "groupB_7"}, {"name": "Eastman (Longview)", "addr": "3306 S. Eastman Rd, Longview, TX 75602", "lat": 32.4517169, "lng": -94.7078858, "kind": "store", "_id": "groupB_8"}, {"name": "Marshall (Longview)", "addr": "701 W. Marshall Ave, Longview, TX 75601", "lat": 32.5000234, "lng": -94.7499075, "kind": "store", "_id": "groupB_9"}, {"name": "Loop 281 (Longview)", "addr": "1623 W. Loop 281, Longview, TX 75604", "lat": 32.5270918, "lng": -94.7799441, "kind": "store", "_id": "groupB_10"}, {"name": "McCann (Longview)", "addr": "3511 McCann Rd, Longview, TX 75605", "lat": 32.5398472, "lng": -94.7548195, "kind": "store", "_id": "groupB_11"}, {"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupB_12"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "5100 E End Blvd S, Marshall, TX 75672"}}, "view": "all", "version": 2}, "shared": {"parties": {"groupA": {"label": "Group A \u2014 Armaan & Usman (Grapevine)", "stops": [{"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_0"}, {"name": "Copperas Cove", "addr": "1001 East Highway 190, Copperas Cove, TX 76522", "lat": 31.1204224, "lng": -97.8931716, "kind": "store", "_id": "groupA_1"}, {"name": "Clear Creek (Killeen)", "addr": "2902 Clear Creek, Killeen, TX 76549", "lat": 31.1081186, "lng": -97.8010413, "kind": "store", "_id": "groupA_2"}, {"name": "West Stan (Killeen)", "addr": "1105 W. Stan Schlueter Loop, Killeen, TX 76549", "lat": 31.0800779, "lng": -97.7616618, "kind": "store", "_id": "groupA_3"}, {"name": "Fort Hood (Killeen)", "addr": "1029 S Fort Hood St, Killeen, TX 76541", "lat": 31.1117404, "lng": -97.7471337, "kind": "store", "_id": "groupA_4"}, {"name": "Rancier (Killeen)", "addr": "505 East Rancier, Killeen, TX 76541", "lat": 31.1252523, "lng": -97.7228155, "kind": "store", "_id": "groupA_5"}, {"name": "Stan (Killeen)", "addr": "3809 E. Stan Schlueter Loop, Killeen, TX 76542", "lat": 31.0719884, "lng": -97.7095775, "kind": "store", "_id": "groupA_6"}, {"name": "Harker Heights", "addr": "680 E Knights Way, Harker Heights, TX 76548", "lat": 31.0587236, "lng": -97.661126, "kind": "store", "_id": "groupA_7"}, {"name": "Belton", "addr": "206 N. IH-35 Belton, TX 76513", "lat": 31.0215065, "lng": -97.4769954, "kind": "store", "_id": "groupA_8"}, {"name": "Hotel Corsicana", "addr": "623 Bryant's Way, Corsicana, TX 75109", "lat": 32.0718587, "lng": -96.4417145, "kind": "hotel", "_id": "groupA_9"}, {"name": "Temple 31st", "addr": "2110 S. 31st St Suite 120, Temple, TX 76504", "lat": 31.0801639, "lng": -97.3659744, "kind": "store", "_id": "groupA_10"}, {"name": "North Temple", "addr": "4405 N. General Bruce Drive, Temple, TX 76501", "lat": 31.1406888, "lng": -97.3278837, "kind": "store", "_id": "groupA_11"}, {"name": "Hewitt (Waco)", "addr": "1601 Hewitt Drive, Waco, TX 76712", "lat": 31.4813032, "lng": -97.2080858, "kind": "store", "_id": "groupA_12"}, {"name": "New Road (Waco)", "addr": "2401 S. New Road, Waco, TX 76711", "lat": 31.5082489, "lng": -97.144856, "kind": "store", "_id": "groupA_13"}, {"name": "Valley Mills (Waco)", "addr": "1210 N. Valley Mills Dr., Waco, TX 76710", "lat": 31.530439, "lng": -97.1886823, "kind": "store", "_id": "groupA_14"}, {"name": "Lakeshore (Waco)", "addr": "103 E. Loop 340, Waco, TX 76705", "lat": 31.603975, "lng": -97.107982, "kind": "store", "_id": "groupA_15"}, {"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupA_16"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "623 Bryant's Way, Corsicana, TX 75109"}, "groupB": {"label": "Group B \u2014 Karim & Steve (Grapevine)", "stops": [{"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupB_0"}, {"name": "Canton", "addr": "575 E State Highway 243, Canton, TX 75103", "lat": 32.5450543, "lng": -95.8557903, "kind": "store", "_id": "groupB_1"}, {"name": "Athens", "addr": "1004 East Tyler St, Athens, TX 75751", "lat": 32.2052538, "lng": -95.8383086, "kind": "store", "_id": "groupB_2"}, {"name": "Palestine", "addr": "2901 S. Loop 256, Palestine, TX 75801", "lat": 31.7340322, "lng": -95.6258271, "kind": "store", "_id": "groupB_3"}, {"name": "Jacksonville", "addr": "505 East Rusk St, Jacksonville, TX 75766", "lat": 31.964, "lng": -95.2669, "kind": "store", "_id": "groupB_4"}, {"name": "Crockett", "addr": "940 E Loop 304, Crockett, TX 75835", "lat": 31.3274505, "lng": -95.4397698, "kind": "store", "_id": "groupB_5"}, {"name": "Hotel Corsicana", "addr": "623 Bryant's Way, Corsicana, TX 75109", "lat": 32.0718587, "lng": -96.4417145, "kind": "hotel", "_id": "groupB_6"}, {"name": "Waskom", "addr": "825 Spur 156, Waskom, TX 75692", "lat": 32.4697287, "lng": -94.0562723, "kind": "store", "_id": "groupB_7"}, {"name": "Eastman (Longview)", "addr": "3306 S. Eastman Rd, Longview, TX 75602", "lat": 32.4517169, "lng": -94.7078858, "kind": "store", "_id": "groupB_8"}, {"name": "Marshall (Longview)", "addr": "701 W. Marshall Ave, Longview, TX 75601", "lat": 32.5000234, "lng": -94.7499075, "kind": "store", "_id": "groupB_9"}, {"name": "Loop 281 (Longview)", "addr": "1623 W. Loop 281, Longview, TX 75604", "lat": 32.5270918, "lng": -94.7799441, "kind": "store", "_id": "groupB_10"}, {"name": "McCann (Longview)", "addr": "3511 McCann Rd, Longview, TX 75605", "lat": 32.5398472, "lng": -94.7548195, "kind": "store", "_id": "groupB_11"}, {"name": "DPM Office (Grapevine)", "addr": "520 E Northwest Hwy Ste 100, Grapevine, TX 76051", "lat": 32.9405059, "lng": -97.0722817, "kind": "home", "_id": "groupB_12"}], "overrides": {}, "dayStart": {"1": 480, "2": 480}, "hotelAddr": "623 Bryant's Way, Corsicana, TX 75109"}}, "view": "all", "version": 2}}, "sharedHotelAddr": "623 Bryant's Way, Corsicana, TX 75109", "sharedHotel": {"name": "Hotel Corsicana", "addr": "623 Bryant's Way, Corsicana, TX 75109", "lat": 32.0718587, "lng": -96.4417145}};
 const R_VISIT_MIN = 30;
 const R_DEFAULT_DAY_START = '8:00 AM';
 const R_COLORS = {a1:'#d64545',a2:'#e88fb0',b1:'#3b6fd4',b2:'#7fc0e8'};
@@ -3708,8 +3783,24 @@ function R_load(){
     return s;
   }catch(e){ return null; }
 }
+const R_HOME_STOP = {name:'DPM Office (Grapevine)', addr:'520 E Northwest Hwy Ste 100, Grapevine, TX 76051', lat:32.9405059, lng:-97.0722817};
 function R_normalizePlan(s){
   if(!s.plan) s.plan='separate';
+  // Both groups start & stop at the DPM Office. Migrate any older saved plan
+  // (e.g. Group B's Plano home base) in place — safe to run repeatedly.
+  try{
+    for(const gk of ['groupA','groupB']){
+      const P=s.parties && s.parties[gk]; if(!P || !P.stops) continue;
+      P.stops.forEach(st=>{
+        if(st.kind==='home' && st.addr!==R_HOME_STOP.addr){
+          st.name=R_HOME_STOP.name; st.addr=R_HOME_STOP.addr;
+          st.lat=R_HOME_STOP.lat; st.lng=R_HOME_STOP.lng;
+          s.__homeMigrated=true;
+        }
+      });
+      if(P.label) P.label=P.label.replace('(Plano)','(Grapevine)');
+    }
+  }catch(e){}
   if(s.dirty===undefined) s.dirty=false;
   if(!s.sharedHotelAddr) s.sharedHotelAddr=R_PRESETS.sharedHotelAddr;
   if(typeof s.visitMin!=='number') s.visitMin=45;
@@ -4097,14 +4188,108 @@ window.R_setDeviceView=function(v){
 };
 function R_ensureMap(){
   if(R_map) return R_map;
-  // Phones: don't create the map (or download a single tile) until the
-  // full-screen viewer is actually opened — big battery/memory/data win.
-  if(R_isPhone() && !window.__mapOverlayOpen) return null;
+  // The map is only created once it's actually visible: full-screen overlay
+  // (phone) or the inline Show-map toggle (desktop). Saves battery/data.
+  if(!window.__mapOverlayOpen && !(R_inlineMapOn() && !R_isPhone())) return null;
   const el=document.getElementById('map'); if(!el) return null;
   R_map=L.map('map',{scrollWheelZoom:true}).setView([32.0,-96.0],7);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap',maxZoom:18}).addTo(R_map);
   return R_map;
 }
+
+// ---- Inline map toggle (desktop). Off by default: itineraries are the page. ----
+function R_inlineMapOn(){ try{ return localStorage.getItem('dpm.showMap')==='1'; }catch(e){ return false; } }
+function R_applyInlineMap(){
+  const row=document.querySelector('#view-route .maprow');
+  const btn=document.getElementById('btnMapToggle');
+  const on=R_inlineMapOn() && !R_isPhone();
+  if(row) row.classList.toggle('show', on);
+  if(btn) btn.textContent = on ? '🗺 Hide map' : '🗺 Show map';
+  if(on){
+    setTimeout(()=>{ R_ensureMap(); if(R_map){ R_map.invalidateSize(); R_drawMap(); } }, 60);
+  }
+}
+
+// ---------- Printable itinerary (4 columns, like the office sheet) ----------
+function R_fmtDurHM(mins){
+  mins=Math.max(0,Math.round(mins));
+  const h=Math.floor(mins/60), m=mins%60;
+  return h+':'+String(m).padStart(2,'0');
+}
+function R_buildPrintHTML(){
+  const view=R_currentView();
+  const groups=(view==='groupA')?['groupA']:(view==='groupB')?['groupB']:['groupA','groupB'];
+  const dayFilter=(view==='day1')?1:(view==='day2')?2:null;
+  let html='';
+  for(const gk of groups){
+    const P=RSTATE.parties[gk];
+    const times=R_computeParty(P);
+    let rows='', lastDay=0;
+    for(let i=0;i<P.stops.length;i++){
+      const st=P.stops[i], t=times[i];
+      if(dayFilter && t.day!==dayFilter) continue;
+      if(t.day!==lastDay){
+        rows+=`<tr><td class="pt-day" colspan="4">Day ${t.day}</td></tr>`;
+        lastDay=t.day;
+        // Where the day begins (DPM Office on day 1, the hotel on day 2)
+        const from=(i===0)?st:(P.stops[i-1]||st);
+        const anchor=(i===0)?t.depart:t.arrive;
+        rows+=`<tr class="pt-drive"><td colspan="4" class="pt-loc" style="font-style:italic">Day ${t.day} starts from ${R_escapeHtml(from.name)} &middot; first stop ${R_fmt(anchor)}</td></tr>`;
+      }
+      // drive leg into this stop
+      if(i>0 && times[i-1].day===t.day){
+        const legStart=times[i-1].depart;
+        const legMin=t.arrive-legStart;
+        if(legMin>0.4){
+          rows+=`<tr class="pt-drive"><td>${R_fmt(legStart)}</td><td>${R_fmt(t.arrive)}</td><td>${R_fmtDurHM(legMin)}</td><td class="pt-loc">${R_escapeHtml(st.name)}</td></tr>`;
+        }
+      }
+      // time spent at this stop
+      if(t.dur>0.4){
+        let what=st.name;
+        if(st.kind==='store') what=st.name+' Store Visit';
+        else if(st.kind==='lunch') what='Lunch Break';
+        rows+=`<tr class="pt-visit"><td>${R_fmt(t.arrive)}</td><td>${R_fmt(t.depart)}</td><td>${R_fmtDurHM(t.dur)}</td><td class="pt-loc">${R_escapeHtml(what)}</td></tr>`;
+      }
+    }
+    const title=P.label.replace(/ \(.*\)/,'');
+    html+=`<table class="print-table">
+      <tr><td class="pt-group" colspan="4">${R_escapeHtml(title)}</td></tr>
+      <tr><th>Start Time</th><th>End Time</th><th>Duration (in Mins)</th><th>Store Locations</th></tr>
+      ${rows}
+    </table>`;
+  }
+  const d=new Date();
+  html=`<div class="pt-note">DPM Acquisition — Route Itinerary · generated ${d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})} ${d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</div>`+html;
+  return html;
+}
+window.R_openPrintModal=function(){
+  if(!RSTATE) return;
+  const html=R_buildPrintHTML();
+  const prev=document.getElementById('print-preview');
+  const sheet=document.getElementById('print-sheet');
+  if(prev) prev.innerHTML=html;
+  if(sheet) sheet.innerHTML=html;
+  document.getElementById('print-modal').classList.add('open');
+};
+window.R_closePrintModal=function(){
+  document.getElementById('print-modal').classList.remove('open');
+};
+// click the dark scrim or press Escape to dismiss the print preview
+document.addEventListener('click',(e)=>{
+  const m=document.getElementById('print-modal');
+  if(m && m.classList.contains('open') && e.target===m) window.R_closePrintModal();
+});
+document.addEventListener('keydown',(e)=>{
+  if(e.key==='Escape') window.R_closePrintModal && window.R_closePrintModal();
+});
+window.R_doPrint=function(){
+  document.body.classList.add('printing');
+  const done=()=>{ document.body.classList.remove('printing'); window.removeEventListener('afterprint',done); };
+  window.addEventListener('afterprint',done);
+  window.print();
+  setTimeout(done,2000); // safety for browsers without afterprint
+};
 
 // ---- Full-screen map overlay (mobile). Reuses the one Leaflet instance by
 // physically moving the #map node between the page and the overlay. ----
@@ -4375,6 +4560,11 @@ function R_wireToolbarOnce(){
     });
     R_markDirty(); R_save(); R_redraw();
   });
+  document.getElementById('btnMapToggle').addEventListener('click',()=>{
+    try{ localStorage.setItem('dpm.showMap', R_inlineMapOn()?'0':'1'); }catch(e){}
+    R_applyInlineMap();
+  });
+  document.getElementById('btnPrint').addEventListener('click',()=>window.R_openPrintModal());
   document.getElementById('btnExport').addEventListener('click',R_exportState);
   document.getElementById('btnImport').addEventListener('click',()=>document.getElementById('importFile').click());
   document.getElementById('importFile').addEventListener('change',e=>{ if(e.target.files[0]) R_importState(e.target.files[0]); e.target.value=''; });
@@ -4389,10 +4579,8 @@ function R_wireToolbarOnce(){
     // Rotated/resized into desktop width while on the route page: bring the
     // inline map up now (it was skipped on phone-sized loads).
     const rv=document.getElementById('view-route');
-    if(!R_isPhone() && rv && !rv.classList.contains('hidden')){
-      const had=!!R_map;
-      R_ensureMap();
-      if(R_map){ R_map.invalidateSize(); if(!had) R_drawMap(); }
+    if(rv && !rv.classList.contains('hidden')){
+      R_applyInlineMap();
     }
   },150); });
 }
@@ -4404,6 +4592,7 @@ window.R_openRouteView = function(){
   document.getElementById('viewSelect').value=R_currentView();
   R_updatePlanUI();
   R_updateVisitUI();
+  R_applyInlineMap();
   // Map needs a tick after the panel is shown so Leaflet can size correctly.
   setTimeout(()=>{ R_ensureMap(); if(R_map) R_map.invalidateSize(); R_redraw(); }, 60);
 };
@@ -4418,6 +4607,12 @@ window.R_applyCloudPlan = function(planObj){
     R_applyingRemote = true;
     RSTATE = R_normalizePlan(planObj);
     R_applyingRemote = false;
+    // A stale cloud plan (e.g. old Group B home base) was migrated to the DPM
+    // Office in-memory — push the corrected plan back up once so it sticks.
+    if (RSTATE.__homeMigrated) {
+      delete RSTATE.__homeMigrated;
+      setTimeout(()=>R_save(), 800);
+    }
   }
   if(document.getElementById('view-route') && !document.getElementById('view-route').classList.contains('hidden')){
     R_updatePlanUI(); R_updateVisitUI(); R_redraw();
