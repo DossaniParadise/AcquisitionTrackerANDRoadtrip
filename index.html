@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="DPM Tracker">
+  <meta name="apple-mobile-web-app-title" content="DPM Acquisition Tracker">
   <title>DPM Acquisition Tracker</title>
   
   <!-- Premium Hospitality/Restaurant Brand Tailwind CSS Config -->
@@ -664,6 +664,65 @@
             <p class="text-xs text-neutral-500">Configure checklist assets and locations in real-time.</p>
           </div>
 
+          <!-- ADMIN OPTIONS (password-gated with the rest of Settings; synced to every device) -->
+          <div class="bg-white border border-orange-100/65 rounded-3xl p-5 space-y-4 shadow-xs">
+            <div class="flex items-center gap-2">
+              <span class="p-1.5 bg-[#1E3A8A] text-white rounded-xl flex items-center justify-center"><i data-lucide="shield-check" class="w-4 h-4"></i></span>
+              <div>
+                <h3 class="text-sm font-extrabold text-[#1E3A8A]">Admin Options</h3>
+                <p class="text-[10px] text-neutral-500">Applies to every device instantly.</p>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-neutral-800">Everyone sees all stores</p>
+                  <p class="text-[10px] text-neutral-500">Inspect list shows all 24 for every inspector (route order).</p>
+                </div>
+                <button data-action="toggle-app-cfg" data-key="allStores" id="cfg-allStores" class="eq-switch eq-off shrink-0"><span class="eq-knob pointer-events-none"></span></button>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-neutral-800">Everyone can view both routes</p>
+                  <p class="text-[10px] text-neutral-500">Unlocks the route View dropdown for all four inspectors.</p>
+                </div>
+                <button data-action="toggle-app-cfg" data-key="unlockRoutes" id="cfg-unlockRoutes" class="eq-switch eq-off shrink-0"><span class="eq-knob pointer-events-none"></span></button>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-neutral-800">Equipment on one page</p>
+                  <p class="text-[10px] text-neutral-500">No Back/Next — the whole list scrolls. Uses more memory.</p>
+                </div>
+                <button data-action="toggle-app-cfg" data-key="equipSinglePage" id="cfg-equipSinglePage" class="eq-switch eq-off shrink-0"><span class="eq-knob pointer-events-none"></span></button>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-neutral-800">Lite photos</p>
+                  <p class="text-[10px] text-neutral-500">Saved thumbnails stay unloaded behind a "Show photos" tap. Uploading photos always show.</p>
+                </div>
+                <button data-action="toggle-app-cfg" data-key="litePhotos" id="cfg-litePhotos" class="eq-switch eq-off shrink-0"><span class="eq-knob pointer-events-none"></span></button>
+              </div>
+              <div class="flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="text-xs font-bold text-neutral-800">"In progress" idle timeout</p>
+                  <p class="text-[10px] text-neutral-500">Minutes without a save before the route shows a store as idle.</p>
+                </div>
+                <input type="number" inputmode="numeric" min="5" max="240" id="cfg-staleMin" data-action="set-stale-min"
+                  class="w-20 shrink-0 text-center bg-neutral-50 border border-neutral-200 rounded-xl px-2 py-2 text-xs font-extrabold font-mono">
+              </div>
+            </div>
+
+            <div class="border-t border-red-100 pt-3.5 space-y-2">
+              <p class="text-[10px] font-extrabold uppercase tracking-widest text-red-500">Danger zone</p>
+              <p class="text-[10px] text-neutral-500">Delete TODAY's inspection for a store (removes its ratings, comments and photo links for today — for clearing test runs).</p>
+              <div class="flex gap-2">
+                <select id="admin-clear-store" class="flex-1 min-w-0 text-xs font-semibold bg-neutral-50 border border-neutral-200 rounded-xl px-3 py-2.5 cursor-pointer"></select>
+                <button data-action="clear-today-inspection" class="shrink-0 bg-red-650 hover:bg-red-700 text-white text-[11px] font-bold px-4 py-2.5 rounded-xl transition cursor-pointer">Delete today's</button>
+              </div>
+            </div>
+          </div>
+
           <div class="flex bg-stone-200/50 border border-orange-100/20 p-1 rounded-2xl gap-0.5 select-none">
             <button data-action="set-settings-tab" data-tab="stores" id="tab-stores" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl transition bg-white text-[#EA580C] shadow-xs flex items-center justify-center gap-2 cursor-pointer">Stores</button>
             <button data-action="set-settings-tab" data-tab="facilities" id="tab-facilities" class="flex-1 py-2 px-3 text-xs font-bold rounded-xl transition text-neutral-500 hover:text-neutral-900 flex items-center justify-center gap-2 cursor-pointer">Facilities</button>
@@ -1057,6 +1116,40 @@
     window.updateOnlineStatus = updateOnlineStatus;
 
     // GLOBAL SYSTEM STATE
+    // =========================================================================
+    // APP CONFIG — admin toggles (Settings, password-gated). Synced to every
+    // device through Firestore doc appConfig/current.
+    // =========================================================================
+    window.__appCfg = {
+      allStores: false,        // everyone sees all 24 stores in the Inspect list
+      unlockRoutes: false,     // everyone gets the full route View dropdown
+      equipSinglePage: false,  // equipment checklist as ONE page (no Back/Next)
+      litePhotos: false,       // hide saved thumbnails until tapped (saves memory/data)
+      staleMin: 45             // minutes of silence before "in progress" becomes "idle"
+    };
+    window.__thumbsShown = {}; // per-card "show photos" reveals (lite mode)
+    function saveAppCfg(partial) {
+      Object.assign(window.__appCfg, partial); // optimistic
+      setDoc(doc(db, "appConfig", "current"), { ...partial, updatedAt: Date.now() }, { merge: true })
+        .catch(err => { console.error("config save failed", err); sendNotification("Couldn't save that option — check connection.", "error"); });
+    }
+    function watchAppConfig() {
+      onSnapshot(doc(db, "appConfig", "current"), (snap) => {
+        if (snap.exists()) {
+          const d = snap.data();
+          ['allStores', 'unlockRoutes', 'equipSinglePage', 'litePhotos'].forEach(k => { if (typeof d[k] === 'boolean') window.__appCfg[k] = d[k]; });
+          if (typeof d.staleMin === 'number' && d.staleMin >= 5) window.__appCfg.staleMin = d.staleMin;
+        }
+        // apply everywhere the options matter
+        renderStoreSelections();
+        if (window.state.currentView === 'equipment') renderEquipmentChecklist();
+        if (window.state.currentView === 'facility') renderFacilityChecklist();
+        if (window.state.currentView === 'settings') renderAdminOptions();
+        const rv = document.getElementById('view-route');
+        if (rv && !rv.classList.contains('hidden') && window.R_openRouteView) window.R_openRouteView();
+      }, (err) => console.error("appConfig sync error:", err));
+    }
+
     // While an order rewrite is committing, snapshot echoes must not re-render
     // the Settings list (that's what made items "come again" mid-edit).
     let orderWriteInFlight = false;
@@ -1194,12 +1287,27 @@
     }
     function visibleStores() {
       const allow = allowedStoreSet();
-      if (!allow.size) return window.state.stores;
-      return window.state.stores.filter(st => allow.has(String(st.name || '').trim().toLowerCase()));
+      const src = !allow.size ? window.state.stores
+        : window.state.stores.filter(st => allow.has(String(st.name || '').trim().toLowerCase()));
+      // Belt & braces: if duplicate docs exist in Firestore (see dedupeStores),
+      // never show the same store twice — prefer the doc with a cluster label.
+      const byName = new Map();
+      src.forEach(st => {
+        const key = String(st.name || '').trim().toLowerCase();
+        const prev = byName.get(key);
+        if (!prev || (!prev.cluster && st.cluster)) byName.set(key, st);
+      });
+      return Array.from(byName.values());
     }
     // Any route store missing from the stores collection gets created silently
     // (once per session) so it can be inspected. Extras are hidden, not deleted
     // — remove them in Settings if you want them gone for good.
+    // Auto-created stores use a DETERMINISTIC doc id derived from the name, so
+    // five phones booting at once all write the SAME document instead of five
+    // copies (the addDoc random-id race that caused the duplicates).
+    function storeDocId(name) {
+      return 'store_' + String(name || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
+    }
     let __storeSyncDone = false;
     async function ensureRouteStoresExist() {
       if (__storeSyncDone) return;
@@ -1211,13 +1319,48 @@
       if (!missing.length) { __storeSyncDone = true; return; }
       __storeSyncDone = true;
       try {
-        for (const name of missing) {
-          await addDoc(collection(db, "stores"), { name: name, cluster: '' });
-        }
+        const batch = writeBatch(db);
+        missing.forEach(name => batch.set(doc(db, "stores", storeDocId(name)), { name: name, cluster: '' }, { merge: true }));
+        await batch.commit();
         console.log('Auto-added route stores:', missing);
       } catch (e) { console.error('Store sync failed', e); __storeSyncDone = false; }
     }
     window.ensureRouteStoresExist = ensureRouteStoresExist;
+
+    // Clean existing duplicates out of Firestore: for each normalized name,
+    // keep ONE deterministic survivor (a doc with a cluster label wins, then
+    // lowest doc id — every device computes the same winner, and deletes are
+    // idempotent, so concurrent cleanup from several phones is safe).
+    let __dedupeDone = false;
+    async function dedupeStores() {
+      if (__dedupeDone || !window.state.stores || !window.state.stores.length) return;
+      const byName = new Map();
+      window.state.stores.forEach(st => {
+        const key = String(st.name || '').trim().toLowerCase();
+        if (!key) return;
+        if (!byName.has(key)) byName.set(key, []);
+        byName.get(key).push(st);
+      });
+      const toDelete = [];
+      byName.forEach(arr => {
+        if (arr.length < 2) return;
+        arr.sort((a, b) => {
+          const ca = a.cluster ? 0 : 1, cb = b.cluster ? 0 : 1;
+          if (ca !== cb) return ca - cb;                       // keep the one with a cluster
+          return String(a.id).localeCompare(String(b.id));     // then lowest id
+        });
+        toDelete.push(...arr.slice(1));
+      });
+      __dedupeDone = true;
+      if (!toDelete.length) return;
+      try {
+        const batch = writeBatch(db);
+        toDelete.forEach(st => batch.delete(doc(db, "stores", st.id)));
+        await batch.commit();
+        sendNotification(`Removed ${toDelete.length} duplicate store record(s).`, "success");
+        console.log('Deduped stores:', toDelete.map(x => `${x.name} (${x.id})`));
+      } catch (e) { __dedupeDone = false; console.error('Store dedupe failed', e); }
+    }
 
     // =========================================================================
     // FINISH VALIDATION — every vital item needs a rating OR a photo. Missing
@@ -1361,8 +1504,9 @@
         if (window.state.currentView === 'settings' && !window.state.editingStoreId) renderSettingsItems();
         updateFleetStats();
         if (window.state.currentView === 'overview') renderOverviewCardsList();
-        // Keep the collection aligned with the 24 route-plan stores.
-        setTimeout(ensureRouteStoresExist, 500);
+        // Keep the collection aligned with the 24 route-plan stores:
+        // first remove any duplicate docs, then add whatever is missing.
+        setTimeout(async () => { await dedupeStores(); ensureRouteStoresExist(); }, 500);
       }, (err) => {
         console.error("Firestore stores sync error:", err);
         sendNotification("Database configuration failed to download. Check settings.", "error");
@@ -1690,6 +1834,7 @@
 
     // Start the cloud watchers as soon as the app boots.
     watchRoutePlan();
+    watchAppConfig();
     loadInspectionsHistory();
 
 
@@ -2064,6 +2209,7 @@
     // Group B's; Usman & Dania -> all 24. Always in route order.
     function orderedInspectStoreNames() {
       const by = window.R_routeStoreNamesByGroup ? window.R_routeStoreNamesByGroup() : { groupA: [], groupB: [] };
+      if (window.__appCfg && window.__appCfg.allStores) return [...by.groupA, ...by.groupB];
       const n = (localStorage.getItem('dpm.userName') || '').trim().toLowerCase();
       if (n === 'armaan') return by.groupA;
       if (n === 'karim' || n === 'steve') return by.groupB;
@@ -2141,6 +2287,24 @@
       fill('filter-facility-select', window.state.facilityCategories, window.state.filterFacility, 'All Facility Categories');
       fill('filter-equipment-select', window.state.equipmentList, window.state.filterEquipment, 'All Equipment Items');
     }
+
+    function renderAdminOptions() {
+      const cfg = window.__appCfg || {};
+      ['allStores', 'unlockRoutes', 'equipSinglePage', 'litePhotos'].forEach(k => {
+        const sw = document.getElementById('cfg-' + k);
+        if (sw) { sw.classList.toggle('eq-off', !cfg[k]); sw.setAttribute('aria-checked', String(!!cfg[k])); }
+      });
+      const st = document.getElementById('cfg-staleMin');
+      if (st && document.activeElement !== st) st.value = cfg.staleMin || 45;
+      const sel = document.getElementById('admin-clear-store');
+      if (sel) {
+        const cur = sel.value;
+        const names = (window.R_routeStoreNames ? window.R_routeStoreNames() : []);
+        sel.innerHTML = '<option value="">Choose store…</option>' +
+          names.map(n => `<option value="${escapeHtml(n)}" ${n === cur ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+      }
+    }
+    window.renderAdminOptions = renderAdminOptions;
 
     function renderSettingsItems() {
       const container = document.getElementById('settings-managed-items-list');
@@ -2228,6 +2392,8 @@
       }
 
       if (editing && window.__orderDraft) list = window.__orderDraft;
+
+      renderAdminOptions();
 
       const activeTabBtn = document.getElementById(`tab-${window.state.settingsTab}`);
       ['tab-stores', 'tab-facilities', 'tab-equipment'].forEach(btnId => {
@@ -2394,10 +2560,18 @@
         else if (ans.rating === 'Bad') commentPlaceholder = "Why wasn't this Acceptable?";
 
         let photosHTML = '';
-        if (ans.photos && ans.photos.length > 0) {
+        // Lite photos: saved thumbnails stay unloaded (a "show" button instead)
+        // until tapped; uploading/failed tiles always show so progress is visible.
+        const liteKeyF = 'facility::' + cat;
+        const liteF = window.__appCfg && window.__appCfg.litePhotos && !window.__thumbsShown[liteKeyF];
+        const photosToRender = liteF
+          ? (ans.photos || []).filter(p => p.status === 'queued' || p.status === 'uploading' || p.status === 'failed')
+          : (ans.photos || []);
+        const hiddenThumbs = (ans.photos || []).length - photosToRender.length;
+        if (photosToRender.length > 0) {
           photosHTML = `
             <div class="grid grid-cols-2 gap-2.5 pt-2.5">
-              ${ans.photos.map((p) => {
+              ${photosToRender.map((p) => {
                 const pid = p.id || p.url;
                 let border = "border-green-600";
                 if (p.tag === 'Acceptable') border = "border-amber-500";
@@ -2432,6 +2606,13 @@
               }).join('')}
             </div>
           `;
+        }
+        if (hiddenThumbs > 0) {
+          photosHTML += `
+            <button data-action="show-thumbs" data-kind="facility" data-item="${escapeHtml(cat)}" class="w-full flex items-center justify-center gap-2 border border-dashed border-neutral-300 hover:border-neutral-400 py-2.5 rounded-xl bg-neutral-50/60 transition cursor-pointer mt-2">
+              <i data-lucide="image" class="w-4 h-4 text-neutral-500"></i>
+              <span class="text-[11px] font-bold text-neutral-600">Show ${hiddenThumbs} photo${hiddenThumbs > 1 ? 's' : ''}</span>
+            </button>`;
         }
 
         const cardKey = 'facility::' + cat;
@@ -2529,7 +2710,7 @@
         else { vitalN++; vitalItems.push({ eqObj, num: vitalN }); }
       });
 
-      const EQUIP_PAGES = 3;
+      const EQUIP_PAGES = (window.__appCfg && window.__appCfg.equipSinglePage) ? 1 : 3;
       const renderPagedList = (host, items, pageKey) => {
         const pageSize = Math.max(1, Math.ceil(items.length / EQUIP_PAGES));
         const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -2591,10 +2772,16 @@
       else if (ans.rating === 'Bad') commentPlaceholder = "Why wasn't this Acceptable?";
 
       let photosHTML = '';
-      if (ans.photos && ans.photos.length > 0) {
+      const liteKeyE = 'equipment::' + eq;
+      const liteE = window.__appCfg && window.__appCfg.litePhotos && !window.__thumbsShown[liteKeyE];
+      const photosToRenderE = liteE
+        ? (ans.photos || []).filter(p => p.status === 'queued' || p.status === 'uploading' || p.status === 'failed')
+        : (ans.photos || []);
+      const hiddenThumbsE = (ans.photos || []).length - photosToRenderE.length;
+      if (photosToRenderE.length > 0) {
         photosHTML = `
           <div class="grid grid-cols-2 gap-2.5 pt-2.5">
-            ${ans.photos.map((p) => {
+            ${photosToRenderE.map((p) => {
               const pid = p.id || p.url;
               let border = "border-green-600";
               if (p.tag === 'Acceptable') border = "border-amber-500";
@@ -2628,6 +2815,13 @@
             }).join('')}
           </div>
         `;
+      }
+      if (hiddenThumbsE > 0) {
+        photosHTML += `
+          <button data-action="show-thumbs" data-kind="equipment" data-item="${escapeHtml(eq)}" class="w-full flex items-center justify-center gap-2 border border-dashed border-neutral-300 hover:border-neutral-400 py-2.5 rounded-xl bg-neutral-50/60 transition cursor-pointer mt-2">
+            <i data-lucide="image" class="w-4 h-4 text-neutral-500"></i>
+            <span class="text-[11px] font-bold text-neutral-600">Show ${hiddenThumbsE} photo${hiddenThumbsE > 1 ? 's' : ''}</span>
+          </button>`;
       }
 
       const cardKey = 'equipment::' + eq;
@@ -3344,6 +3538,7 @@
           window.state.equipPage = 0;
           window.state.nonVitalPage = 0;
           window.state.facilityPage = 0;
+          window.__thumbsShown = {}; // lite-photos reveals reset per inspection
           if (modeVal === 'facility' || modeVal === 'both') {
             navigate('facility');
           } else {
@@ -3377,6 +3572,12 @@
             navigate('landing');
           }
         );
+      }
+
+      if (action === 'show-thumbs') {
+        const k = target.getAttribute('data-kind') + '::' + target.getAttribute('data-item');
+        window.__thumbsShown[k] = true;
+        rerenderChecklistSoft();
       }
 
       if (action === 'equip-page') {
@@ -3721,6 +3922,41 @@
         }
       }
 
+      if (action === 'toggle-app-cfg') {
+        const key = target.getAttribute('data-key');
+        const newVal = !window.__appCfg[key];
+        saveAppCfg({ [key]: newVal });
+        renderAdminOptions();
+        // immediate local effect (the snapshot echo confirms it for everyone else)
+        renderStoreSelections();
+        if (window.state.currentView === 'equipment') renderEquipmentChecklist();
+        if (window.state.currentView === 'facility') renderFacilityChecklist();
+        sendNotification(`${target.closest('.flex').querySelector('p').textContent}: ${newVal ? 'ON' : 'OFF'} (all devices)`, "success");
+      }
+
+      if (action === 'clear-today-inspection') {
+        const sel = document.getElementById('admin-clear-store');
+        const storeName = sel ? sel.value : '';
+        if (!storeName) { sendNotification("Choose a store first.", "info"); return; }
+        const isoDay = new Date().toISOString().slice(0, 10);
+        const docToKill = (window.state.inspections || []).find(i => i.store === storeName && (i.id || '').endsWith(isoDay));
+        if (!docToKill) { sendNotification(`No inspection found for ${storeName} today.`, "info"); return; }
+        showCustomConfirm(
+          "Delete today's inspection?",
+          `This permanently removes today's ratings, comments and photo links for ${storeName} — on every device. Photos already saved to phone galleries are not affected.`,
+          async () => {
+            try {
+              await deleteDoc(doc(db, "inspections", docToKill.id));
+              if (window.state.activeDocId === docToKill.id) { window.state.activeDocId = null; navigate('store-select'); }
+              sendNotification(`Today's inspection for ${storeName} deleted.`, "success");
+            } catch (err) {
+              console.error("delete inspection failed", err);
+              sendNotification("Delete failed: " + err.message, "error");
+            }
+          }
+        );
+      }
+
       if (action === 'start-order-edit') {
         if (window.state.settingsTab === 'stores') return;
         const coll = (window.state.settingsTab === 'facilities') ? 'facilityCategories' : 'equipmentList';
@@ -4024,6 +4260,16 @@
         const changed = String(v) !== (target.getAttribute('data-orig') || '');
         target.classList.toggle('ring-2', changed);
         target.classList.toggle('ring-[#EA580C]', changed);
+        return;
+      }
+
+      if (target && target.getAttribute('data-action') === 'set-stale-min') {
+        let v = parseInt(target.value, 10);
+        if (isNaN(v)) { renderAdminOptions(); return; }
+        v = Math.min(Math.max(v, 5), 240);
+        target.value = v;
+        saveAppCfg({ staleMin: v });
+        sendNotification(`Idle timeout set to ${v} minutes (all devices).`, "success");
         return;
       }
 
@@ -4631,6 +4877,7 @@ try{ R_deviceView = localStorage.getItem('dpm.routeView') || null; }catch(e){}
 // Inspectors are locked to their own group's route. Dania (coordinator)
 // is unrestricted and gets the full View dropdown.
 function R_userLock(){
+  try{ if(window.__appCfg && window.__appCfg.unlockRoutes) return null; }catch(e){}
   const n=(function(){try{return localStorage.getItem('dpm.userName')||''}catch(e){return ''}})().trim().toLowerCase();
   if(n==='armaan') return 'groupA';
   if(n==='karim'||n==='steve') return 'groupB';
@@ -5139,7 +5386,8 @@ function R_inspectionTiming(storeName){
   // A started-but-silent inspection (abandoned test, forgot to finish) shows
   // as paused instead.
   const lastActivity = Math.max(insp.timestamp || 0, ...startTimes);
-  const fresh = complete || (Date.now() - lastActivity) < 45*60000;
+  const staleMin = (window.__appCfg && window.__appCfg.staleMin) || 45;
+  const fresh = complete || (Date.now() - lastActivity) < staleMin*60000;
   return { started, complete, startMin, durMin, fresh };
 }
 // Convert an epoch timestamp to minutes-since-midnight in local time,
