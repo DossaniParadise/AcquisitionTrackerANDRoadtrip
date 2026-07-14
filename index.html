@@ -320,6 +320,7 @@
 #view-route .ins-pill.todo{background:#26333f;color:#9fb3c7}
 #view-route .ins-pill.prog{background:#4a3410;color:#f5c069;border:1px solid #7a5a1a}
 #view-route .ins-pill.done{background:#12331f;color:#57d98a;border:1px solid #1f7a45}
+#view-route .ins-pill.paused{background:#2b2f36;color:#9aa4b1;border:1px solid #3c434d}
 #view-route tr.actual td{box-shadow:inset 3px 0 0 #16a34a}
 #view-route tr.inprogress td{box-shadow:inset 3px 0 0 #f59e0b}
 #view-route .storelink{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
@@ -416,7 +417,7 @@
         <option value="" disabled selected>Select your name&hellip;</option>
         <option value="Armaan">Armaan</option>
         <option value="Karim">Karim</option>
-        <option value="Saskya">Saskya</option>
+        <option value="Dania">Dania</option>
         <option value="Steve">Steve</option>
         <option value="Usman">Usman</option>
       </select>
@@ -943,7 +944,7 @@
       <option value="" disabled selected>Select your name&hellip;</option>
       <option value="Armaan">Armaan</option>
       <option value="Karim">Karim</option>
-      <option value="Saskya">Saskya</option>
+      <option value="Dania">Dania</option>
       <option value="Steve">Steve</option>
       <option value="Usman">Usman</option>
     </select>
@@ -1489,11 +1490,12 @@
     // ---- 2) Inspection lookup for a store (used by route timing) ----
     // Returns the inspection doc for a store, preferring today's, else newest.
     window.__getInspectionForStore = function (storeName) {
+      // TODAY only — an old test/practice inspection from another day must not
+      // mark a store as in progress on the live route.
       const all = (window.state.inspections || []).filter(i => i.store === storeName);
       if (all.length === 0) return null;
       const isoDay = new Date().toISOString().slice(0, 10);
-      const todayDoc = all.find(i => (i.id || '').endsWith(isoDay));
-      return todayDoc || all[0];
+      return all.find(i => (i.id || '').endsWith(isoDay)) || null;
     };
 
     // ---- 3) Start / open an inspection for a given store from the route ----
@@ -2059,7 +2061,7 @@
 
     // WORKSPACE UI RENDERS
     // Who can inspect which stores: Armaan -> Group A's; Karim & Steve ->
-    // Group B's; Usman & Saskya -> all 24. Always in route order.
+    // Group B's; Usman & Dania -> all 24. Always in route order.
     function orderedInspectStoreNames() {
       const by = window.R_routeStoreNamesByGroup ? window.R_routeStoreNamesByGroup() : { groupA: [], groupB: [] };
       const n = (localStorage.getItem('dpm.userName') || '').trim().toLowerCase();
@@ -3094,7 +3096,7 @@
       karim:  { group: 'groupB', label: 'Group B', partner: 'Steve' },
       steve:  { group: 'groupB', label: 'Group B', partner: 'Karim' },
       // Coordinator: sees both groups' routes and can print everything
-      saskya: { group: 'all', label: 'Coordinator', partner: null }
+      dania: { group: 'all', label: 'Coordinator', partner: null }
     };
     window.__userInfo = function () {
       const n = (localStorage.getItem('dpm.userName') || '').trim();
@@ -3133,6 +3135,11 @@
     }
     window.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) lucide.createIcons();
+      // Name migration: devices signed in as Saskya become Dania.
+      try {
+        if ((localStorage.getItem('dpm.userName') || '') === 'Saskya') localStorage.setItem('dpm.userName', 'Dania');
+        if ((localStorage.getItem('dpm.lastInspector') || '') === 'Saskya') localStorage.setItem('dpm.lastInspector', 'Dania');
+      } catch (e) {}
       const saved = localStorage.getItem('dpm.userName') || '';
       // Restoring on load must NOT stomp a manual route-view override.
       if (saved) applyUserName(saved, { setRouteView: false });
@@ -4292,13 +4299,17 @@ function R_computeParty(P){
   const stops=P.stops, n=stops.length, h=R_hotelIndex(stops);
   const out=[];
   let prev=null, prevDay=1;
+  // Lunch is eaten AT the store just inspected — a pause in place. The drive
+  // to the NEXT store must still be paid after lunch, measured from the last
+  // physical location (the store), not from the zero-width lunch row.
+  let lastPhys=null, lastPhysDay=1;
   for(let i=0;i<n;i++){
     const s=stops[i];
     const day = h<0?1:(i<=h?1:2);
-    // A lunch break is a pause in place: no travel time into or out of it.
     const isBreak = s.kind==='lunch';
-    const prevWasBreak = prev && prev.kind==='lunch';
-    const dm = (prev && day===prevDay && !isBreak && !prevWasBreak) ? R_driveMin(prev,s) : 0;
+    const hasLeg = !isBreak && lastPhys && day===lastPhysDay;
+    const dm = hasLeg ? R_driveMin(lastPhys,s) : 0;
+    const driveFromIdx = hasLeg ? lastPhys.__idx : null;
     let earliest;
     if(i===0 || day!==prevDay){
       earliest = P.dayStart[day];
@@ -4326,8 +4337,9 @@ function R_computeParty(P){
       dur = (insp && insp.complete && insp.durMin!=null) ? insp.durMin : (RSTATE.visitMin||45);
     } else dur=0;
     const depart=arrive+dur;
-    out.push({arrive,depart,dur,pinned,conflict,drive:(day===prevDay && !isBreak && !prevWasBreak?dm:null),earliest,day,actual, inProgress: !!(insp && insp.started && !insp.complete)});
+    out.push({arrive,depart,dur,pinned,conflict,drive:(hasLeg?dm:null),driveFromIdx,earliest,day,actual, inProgress: !!(insp && insp.started && !insp.complete && insp.fresh), paused: !!(insp && insp.started && !insp.complete && !insp.fresh)});
     prev=s; prevDay=day;
+    if(!isBreak){ s.__idx=i; lastPhys=s; lastPhysDay=day; }
   }
   return out;
 }
@@ -4374,7 +4386,8 @@ function R_buildTables(){
       // drive row (skipped for lunch breaks, which are pauses in place)
       if(i>0 && t.drive!=null){
         const dr=document.createElement('tr'); dr.className='drive-row';
-        dr.innerHTML=`<td colspan="6">↓ drive ${Math.round(t.drive)} min${R_driveCache[R_legKey(P.stops[i-1],s)]==null?' (est)':''} to next</td>`;
+        const fromStop=(t.driveFromIdx!=null?P.stops[t.driveFromIdx]:P.stops[i-1]);
+        dr.innerHTML=`<td colspan="6">↓ drive ${Math.round(t.drive)} min${R_driveCache[R_legKey(fromStop,s)]==null?' (est)':''} to next</td>`;
         tb.appendChild(dr);
         if(inDay1) day1Rows++;
       }
@@ -4423,6 +4436,7 @@ function R_buildTables(){
       if(isStore){
         if(t.actual) statusPill=`<span class="ins-pill done">✓ actual ${R_fmtDur(t.dur)}</span>`;
         else if(t.inProgress) statusPill=`<span class="ins-pill prog">● in progress</span>`;
+        else if(t.paused) statusPill=`<span class="ins-pill paused">⏸ started, idle</span>`;
         else statusPill=`<span class="ins-pill todo">est ${R_fmtDur(t.dur)}</span>`;
       }
       // Wrench button opens the store action modal (navigate / inspect)
@@ -4560,6 +4574,14 @@ function R_wireInputs(){
 }
 
 // ---------- drag & drop ----------
+// "In progress" ages into "idle" on its own — refresh while the route is visible.
+setInterval(function(){
+  try{
+    const v=document.getElementById('view-route');
+    if(v && !v.classList.contains('hidden') && typeof R_buildTables==='function' && RSTATE) R_buildTables();
+  }catch(e){}
+}, 5*60000);
+
 function R_enableSort(){
   document.querySelectorAll('tbody[data-sortbody]').forEach(tb=>{
     new Sortable(tb,{
@@ -4606,13 +4628,13 @@ window.R_routeStoreNamesByGroup = function(){
 // Default: the signed-in user's own group.
 let R_deviceView=null;
 try{ R_deviceView = localStorage.getItem('dpm.routeView') || null; }catch(e){}
-// Inspectors are locked to their own group's route. Saskya (coordinator)
+// Inspectors are locked to their own group's route. Dania (coordinator)
 // is unrestricted and gets the full View dropdown.
 function R_userLock(){
   const n=(function(){try{return localStorage.getItem('dpm.userName')||''}catch(e){return ''}})().trim().toLowerCase();
   if(n==='armaan') return 'groupA';
   if(n==='karim'||n==='steve') return 'groupB';
-  return null; // usman & saskya see everything
+  return null; // usman & dania see everything
 }
 function R_currentView(){
   const lock=R_userLock();
@@ -5112,7 +5134,13 @@ function R_inspectionTiming(storeName){
     const lastDone = Math.max(...doneTimes);
     durMin = Math.max(1, Math.round((lastDone - firstStart)/60000));
   }
-  return { started, complete, startMin, durMin };
+  // Freshness without GPS: every checklist save stamps the doc, so "in
+  // progress" means someone actually saved something in the last 45 minutes.
+  // A started-but-silent inspection (abandoned test, forgot to finish) shows
+  // as paused instead.
+  const lastActivity = Math.max(insp.timestamp || 0, ...startTimes);
+  const fresh = complete || (Date.now() - lastActivity) < 45*60000;
+  return { started, complete, startMin, durMin, fresh };
 }
 // Convert an epoch timestamp to minutes-since-midnight in local time,
 // matching how the route schedule represents clock times.
@@ -5132,7 +5160,8 @@ window.R_openStoreModal = function(storeName, gk){
   const timing = R_inspectionTiming(storeName);
   const statusEl=document.getElementById('rsm-status');
   if(timing && timing.complete) statusEl.innerHTML=`<span class="ins-pill done">✓ inspected · actual ${R_fmtDur(timing.durMin)}</span>`;
-  else if(timing && timing.started) statusEl.innerHTML=`<span class="ins-pill prog">● inspection in progress</span>`;
+  else if(timing && timing.started && timing.fresh) statusEl.innerHTML=`<span class="ins-pill prog">● inspection in progress</span>`;
+  else if(timing && timing.started) statusEl.innerHTML=`<span class="ins-pill paused">⏸ started earlier, no recent saves</span>`;
   else statusEl.innerHTML=`<span class="ins-pill todo">not started</span>`;
   const navBtn=document.getElementById('rsm-navigate');
   if(stop){
