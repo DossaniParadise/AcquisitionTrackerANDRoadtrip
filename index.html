@@ -395,11 +395,6 @@
         <!-- VIEW: HOME -->
         <div id="view-landing" class="view-panel">
   <div class="max-w-3xl mx-auto w-full space-y-8 py-4">
-    <div class="text-center space-y-2">
-      <h2 class="text-3xl font-extrabold tracking-tight text-[#1E3A8A]">DPM Field Hub</h2>
-      <p class="text-sm text-neutral-500">Choose where you're headed.</p>
-    </div>
-
     <!-- Who is using this device -->
     <div class="bg-white border border-orange-100/50 p-5 rounded-3xl shadow-sm space-y-3 text-left">
       <label for="user-name-select" class="block text-xs font-bold text-neutral-500 uppercase tracking-wider flex items-center gap-1.5">
@@ -409,6 +404,7 @@
         <option value="" disabled selected>Select your name&hellip;</option>
         <option value="Armaan">Armaan</option>
         <option value="Karim">Karim</option>
+        <option value="Saskya">Saskya</option>
         <option value="Steve">Steve</option>
         <option value="Usman">Usman</option>
       </select>
@@ -706,8 +702,8 @@
               <button data-action="toggle-batch-editor" class="flex-1 sm:flex-initial bg-[#EA580C]/10 text-[#EA580C] hover:bg-[#EA580C]/15 border border-[#EA580C]/20 font-bold text-[11px] px-3.5 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
                 <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i> ⚡ Quick Batch Reorder
               </button>
-              <button data-action="sort-items-alphabetical" class="flex-1 sm:flex-initial bg-neutral-100 border border-neutral-250 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 font-bold text-[11px] px-3.5 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
-                <i data-lucide="sort-asc" class="w-3.5 h-3.5"></i> Auto Group A-Z
+              <button data-action="undo-bulk-reorder" class="flex-1 sm:flex-initial bg-neutral-100 border border-neutral-250 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 font-bold text-[11px] px-3.5 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <i data-lucide="undo-2" class="w-3.5 h-3.5"></i> Undo last reorder
               </button>
             </div>
           </div>
@@ -735,6 +731,68 @@
             <!-- Dynamic list of items -->
           </div>
         </div>
+
+  <div id="view-route" class="view-panel hidden">
+<div class="wrap">
+  <header class="top">
+    <h1 style="font-size:20px;margin:0;font-weight:800">Route Guidance</h1>
+    <span class="sub">Two parties &middot; two days &middot; drag to reorder &middot; live drive times</span>
+  </header>
+
+  <div class="hint">Type a time at any stop to pin it. Drag the handle to reorder stops or move a hotel. Tap a store wrench to navigate or start its inspection. Edits sync live to everyone through the cloud. When both inspectors finish a store, its actual time replaces the estimate and the rest of the day shifts automatically.</div>
+
+  <div class="toolbar">
+    <label for="planSelect">Plan</label>
+    <select id="planSelect" aria-label="Choose hotel plan">
+      <option value="separate">Separate hotels (approved)</option>
+      <option value="shared">Shared hotel</option>
+    </select>
+    <span id="sharedHotelWrap" class="sharedHotelWrap" style="display:none">
+      <label for="sharedHotelInput">Shared hotel</label>
+      <input id="sharedHotelInput" placeholder="One hotel for both parties" aria-label="Shared hotel address">
+    </span>
+    <label>Visit</label>
+    <span class="durToggle" role="group" aria-label="Visit duration for all stores">
+      <button class="durBtn" id="durBtn45" data-visit="45">45 min</button><button class="durBtn" id="durBtn30" data-visit="30">30 min</button>
+    </span>
+    <label for="viewSelect">View</label>
+    <select id="viewSelect" aria-label="Filter view">
+      <option value="all">All routes</option>
+      <option value="groupA">Group A only</option>
+      <option value="groupB">Group B only</option>
+      <option value="day1">Day 1 only</option>
+      <option value="day2">Day 2 only</option>
+    </select>
+    <span class="spacer"></span>
+    <button class="btn" id="btnViewMap" onclick="window.R_openMapOverlay && window.R_openMapOverlay()">🗺 View map</button>
+    <button class="btn" id="btnMapToggle">🗺 Show map</button>
+    <button class="btn" id="btnPrint">🖨 Print</button>
+    <span class="saveState" id="saveState">Synced to cloud</span>
+    <button class="btn" id="btnExport">Export</button>
+    <button class="btn" id="btnImport">Import</button>
+    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+    <button class="btn ghost" id="btnReset">Reset all</button>
+  </div>
+
+  <div class="rotate-hint">↻ Rotate your phone to landscape to see both groups side by side.</div>
+  <div id="schedules"></div>
+
+  <div class="maprow">
+    <div id="map"></div>
+    <div class="legend">
+      <span><i class="swatch" style="background:var(--a1)"></i>Group A &middot; Day 1</span>
+      <span><i class="swatch" style="background:var(--a2)"></i>Group A &middot; Day 2</span>
+      <span><i class="swatch" style="background:var(--b1)"></i>Group B &middot; Day 1</span>
+      <span><i class="swatch" style="background:var(--b2)"></i>Group B &middot; Day 2</span>
+      <span><i class="swatch" style="background:var(--home)"></i>Home base</span>
+      <span><i class="swatch" style="background:var(--hotel)"></i>Hotel</span>
+    </div>
+    <div class="status" id="routeStatus">Loading road routes from OSRM&hellip;</div>
+  </div>
+</div>
+
+
+</div>
 
         <div class="pt-8 pb-2 text-center text-[10px] font-mono text-neutral-400 select-none">DPM Acquisition Tracker &middot; v2.6.1</div>
       </main>
@@ -815,67 +873,6 @@
     <span id="upload-status-text">Uploading photos in background…</span>
   </div>
 
-  <div id="view-route" class="view-panel hidden">
-<div class="wrap">
-  <header class="top">
-    <h1 style="font-size:20px;margin:0;font-weight:800">Route Guidance</h1>
-    <span class="sub">Two parties &middot; two days &middot; drag to reorder &middot; live drive times</span>
-  </header>
-
-  <div class="hint">Type a time at any stop to pin it. Drag the handle to reorder stops or move a hotel. Tap a store wrench to navigate or start its inspection. Edits sync live to everyone through the cloud. When both inspectors finish a store, its actual time replaces the estimate and the rest of the day shifts automatically.</div>
-
-  <div class="toolbar">
-    <label for="planSelect">Plan</label>
-    <select id="planSelect" aria-label="Choose hotel plan">
-      <option value="separate">Separate hotels (approved)</option>
-      <option value="shared">Shared hotel</option>
-    </select>
-    <span id="sharedHotelWrap" class="sharedHotelWrap" style="display:none">
-      <label for="sharedHotelInput">Shared hotel</label>
-      <input id="sharedHotelInput" placeholder="One hotel for both parties" aria-label="Shared hotel address">
-    </span>
-    <label>Visit</label>
-    <span class="durToggle" role="group" aria-label="Visit duration for all stores">
-      <button class="durBtn" id="durBtn45" data-visit="45">45 min</button><button class="durBtn" id="durBtn30" data-visit="30">30 min</button>
-    </span>
-    <label for="viewSelect">View</label>
-    <select id="viewSelect" aria-label="Filter view">
-      <option value="all">All routes</option>
-      <option value="groupA">Group A only</option>
-      <option value="groupB">Group B only</option>
-      <option value="day1">Day 1 only</option>
-      <option value="day2">Day 2 only</option>
-    </select>
-    <span class="spacer"></span>
-    <button class="btn" id="btnViewMap" onclick="window.R_openMapOverlay && window.R_openMapOverlay()">🗺 View map</button>
-    <button class="btn" id="btnMapToggle">🗺 Show map</button>
-    <button class="btn" id="btnPrint">🖨 Print</button>
-    <span class="saveState" id="saveState">Synced to cloud</span>
-    <button class="btn" id="btnExport">Export</button>
-    <button class="btn" id="btnImport">Import</button>
-    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-    <button class="btn ghost" id="btnReset">Reset all</button>
-  </div>
-
-  <div class="rotate-hint">↻ Rotate your phone to landscape to see both groups side by side.</div>
-  <div id="schedules"></div>
-
-  <div class="maprow">
-    <div id="map"></div>
-    <div class="legend">
-      <span><i class="swatch" style="background:var(--a1)"></i>Group A &middot; Day 1</span>
-      <span><i class="swatch" style="background:var(--a2)"></i>Group A &middot; Day 2</span>
-      <span><i class="swatch" style="background:var(--b1)"></i>Group B &middot; Day 1</span>
-      <span><i class="swatch" style="background:var(--b2)"></i>Group B &middot; Day 2</span>
-      <span><i class="swatch" style="background:var(--home)"></i>Home base</span>
-      <span><i class="swatch" style="background:var(--hotel)"></i>Hotel</span>
-    </div>
-    <div class="status" id="routeStatus">Loading road routes from OSRM&hellip;</div>
-  </div>
-</div>
-
-
-</div>
 <!-- Full-screen route map (mobile). The #map node is moved in here on open and
      moved back on close so the same Leaflet instance is reused. -->
 <div id="map-fullscreen">
@@ -884,6 +881,23 @@
     <h2>Route Map</h2>
   </div>
   <div class="mfs-body" id="map-fullscreen-body"></div>
+</div>
+
+<!-- Identity gate: the app is unusable until a name is picked -->
+<div id="identity-gate" class="hidden fixed inset-0 z-[10050] bg-[#1E3A8A]/95 items-center justify-center p-6" style="backdrop-filter:blur(3px)">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
+    <span class="p-2.5 bg-[#EA580C] text-white rounded-2xl inline-flex"><i data-lucide="user-check" class="w-6 h-6"></i></span>
+    <h2 class="text-lg font-extrabold text-[#1E3A8A]">Who's using this device?</h2>
+    <p class="text-xs text-neutral-500 leading-relaxed">Pick your name to see your route and sign your inspections. You can change it later on the Home page.</p>
+    <select id="gate-name-select" class="w-full text-sm font-semibold text-neutral-800 bg-neutral-50 border border-orange-200 rounded-2xl px-4 py-3.5 appearance-none cursor-pointer">
+      <option value="" disabled selected>Select your name&hellip;</option>
+      <option value="Armaan">Armaan</option>
+      <option value="Karim">Karim</option>
+      <option value="Saskya">Saskya</option>
+      <option value="Steve">Steve</option>
+      <option value="Usman">Usman</option>
+    </select>
+  </div>
 </div>
 
 <!-- Printable itinerary: preview modal + the sheet that actually prints -->
@@ -1404,14 +1418,14 @@
       if (mode === 'facility' || mode === 'both') {
         st.facilityCategories.forEach(c => {
           const a = st.facilityAnswers[c.name];
-          if (!a || !a.rating) allRated = false;
+          if (!answerHasContent(a)) allRated = false; // rating OR photo counts
         });
       }
       if (mode === 'equipment' || mode === 'both') {
         st.equipmentList.forEach(c => {
           if (c.noncritical) return; // optional items don't block "done"
           const a = st.equipmentAnswers[c.name];
-          if (!a || !a.rating) allRated = false;
+          if (!answerHasContent(a)) allRated = false; // rating OR photo counts
         });
       }
       if (!allRated) return;
@@ -2696,11 +2710,13 @@
         if (titleEl) titleEl.innerText = "Location Info";
         if (subtitleEl) subtitleEl.innerText = "Checklist Target Selection";
       } else if (viewName === 'facility') {
-        if (titleEl) titleEl.innerText = "Facility Checklist";
-        if (subtitleEl) subtitleEl.innerText = "Exterior/Interior Physical Walkthrough";
+        const storeName = (window.state.selectedStore || '').trim();
+        if (titleEl) titleEl.innerText = storeName || "Facility Checklist";
+        if (subtitleEl) subtitleEl.innerText = storeName ? "Facility Checklist" : "Exterior/Interior Physical Walkthrough";
       } else if (viewName === 'equipment') {
-        if (titleEl) titleEl.innerText = "Equipment Checklist";
-        if (subtitleEl) subtitleEl.innerText = "Machinery & Electrical Unit Checks";
+        const storeName = (window.state.selectedStore || '').trim();
+        if (titleEl) titleEl.innerText = storeName || "Equipment Checklist";
+        if (subtitleEl) subtitleEl.innerText = storeName ? "Equipment Checklist" : "Machinery & Electrical Unit Checks";
       } else if (viewName === 'overview') {
         if (titleEl) titleEl.innerText = "Results";
         if (subtitleEl) subtitleEl.innerText = "Filter & Search Audit History";
@@ -2773,7 +2789,9 @@
       armaan: { group: 'groupA', label: 'Group A', partner: 'Usman' },
       usman:  { group: 'groupA', label: 'Group A', partner: 'Armaan' },
       karim:  { group: 'groupB', label: 'Group B', partner: 'Steve' },
-      steve:  { group: 'groupB', label: 'Group B', partner: 'Karim' }
+      steve:  { group: 'groupB', label: 'Group B', partner: 'Karim' },
+      // Coordinator: sees both groups' routes and can print everything
+      saskya: { group: 'all', label: 'Coordinator', partner: null }
     };
     window.__userInfo = function () {
       const n = (localStorage.getItem('dpm.userName') || '').trim();
@@ -2788,7 +2806,9 @@
       if (label) {
         if (info) {
           label.classList.remove('hidden');
-          label.innerHTML = `Signed in as <strong>${escapeHtml(name)}</strong> &middot; ${info.label} (with ${info.partner}). Route Guidance opens on your group's schedule and inspections are signed as you. Change anytime.`;
+          label.innerHTML = info.partner
+            ? `Signed in as <strong>${escapeHtml(name)}</strong> &middot; ${info.label} (with ${info.partner}). Route Guidance shows your group's schedule and inspections are signed as you. Change anytime.`
+            : `Signed in as <strong>${escapeHtml(name)}</strong> &middot; ${info.label}. You see both groups' routes and can print everything.`;
         } else {
           label.classList.add('hidden');
         }
@@ -2814,6 +2834,15 @@
       const sel = document.getElementById('user-name-select');
       if (sel) sel.addEventListener('change', (e) => {
         applyUserName(e.target.value);
+        sendNotification(`Welcome ${e.target.value} — this device is now yours.`, "success");
+      });
+      // Force a name before anything else: block the app behind the gate.
+      const gate = document.getElementById('identity-gate');
+      const gateSel = document.getElementById('gate-name-select');
+      if (!saved && gate) { gate.classList.remove('hidden'); gate.classList.add('flex'); }
+      if (gateSel) gateSel.addEventListener('change', (e) => {
+        applyUserName(e.target.value);
+        if (gate) { gate.classList.add('hidden'); gate.classList.remove('flex'); }
         sendNotification(`Welcome ${e.target.value} — this device is now yours.`, "success");
       });
     });
@@ -3351,30 +3380,35 @@
         }
       }
 
-      if (action === 'sort-items-alphabetical') {
+      if (action === 'undo-bulk-reorder') {
         const coll = (window.state.settingsTab === 'facilities') ? 'facilityCategories' : 'equipmentList';
-        const currentList = (coll === 'facilityCategories') ? [...window.state.facilityCategories] : [...window.state.equipmentList];
-        
-        if (currentList.length === 0) {
-          sendNotification("No assets to sort yet.", "error");
+        let backup = null;
+        try { backup = JSON.parse(localStorage.getItem('dpm.orderBackup.' + coll) || 'null'); } catch (e) {}
+        if (!backup || !backup.items || !backup.items.length) {
+          sendNotification("No reorder backup saved on this device for this list yet. Backups are taken automatically before every bulk reorder from now on.", "info");
           return;
         }
-
-        currentList.sort((a, b) => a.name.localeCompare(b.name));
-        presentOverlay("Auto Alphabetizing", "Synchronized group ordering to Firestore...");
-        try {
-          const promises = currentList.map((item, index) => {
-            return updateDoc(doc(db, coll, item.id), { order: index });
-          });
-          await Promise.all(promises);
-          dismissOverlay();
-          sendNotification("Assets successfully ordered alphabetically!", "success");
-          await loadCollectionsFromCloud();
-        } catch (err) {
-          console.error("Auto sort err:", err);
-          dismissOverlay();
-          sendNotification("Database update failed.", "error");
-        }
+        showCustomConfirm(
+          "Undo last bulk reorder?",
+          `Restores ${backup.items.length} item(s) to the order saved ${new Date(backup.at).toLocaleString()} on this device. Items added since then are kept.`,
+          async () => {
+            presentOverlay("Restoring order", "Writing the saved sequence back to Firestore...");
+            try {
+              await Promise.all(backup.items.map(it => setDoc(
+                doc(db, coll, it.id),
+                Object.assign({ name: it.name, order: it.order },
+                  coll === 'equipmentList' ? { noncritical: !!it.noncritical } : {}),
+                { merge: true }
+              )));
+              dismissOverlay();
+              sendNotification("Order restored from this device's backup.", "success");
+            } catch (err) {
+              console.error("Undo reorder failed:", err);
+              dismissOverlay();
+              sendNotification("Restore failed: " + err.message, "error");
+            }
+          }
+        );
       }
 
       if (action === 'apply-batch-reorder') {
@@ -3409,10 +3443,25 @@
         // 2. Any existing item not in processedIds is deleted from Firebase to reflect deletions
         const itemsToDelete = currentList.filter(item => !processedIds.has(item.id));
 
+        // Safety net: snapshot the current list (order + vital flags) to this
+        // device so "Undo last reorder" can put everything back.
+        try {
+          localStorage.setItem('dpm.orderBackup.' + coll, JSON.stringify({
+            at: Date.now(),
+            items: currentList.map((x, i) => ({
+              id: x.id, name: x.name,
+              order: (x.order != null ? x.order : i),
+              noncritical: !!x.noncritical
+            }))
+          }));
+        } catch (e) {}
+
         presentOverlay("Synchronizing Sequence", "Updating items and removing deleted configurations...");
         try {
           const writePromises = itemsToWrite.map(item => {
-            return setDoc(doc(db, coll, item.id), { name: item.name, order: item.order });
+            // merge:true — a reorder must never wipe other fields (e.g. the
+            // equipment vital/non-vital flag)
+            return setDoc(doc(db, coll, item.id), { name: item.name, order: item.order }, { merge: true });
           });
           const deletePromises = itemsToDelete.map(item => {
             return deleteDoc(doc(db, coll, item.id));
@@ -4119,10 +4168,20 @@ window.R_routeStoreNames = function(){
 // Default: the signed-in user's own group.
 let R_deviceView=null;
 try{ R_deviceView = localStorage.getItem('dpm.routeView') || null; }catch(e){}
+// Inspectors are locked to their own group's route. Saskya (coordinator)
+// is unrestricted and gets the full View dropdown.
+function R_userLock(){
+  const n=(function(){try{return localStorage.getItem('dpm.userName')||''}catch(e){return ''}})().trim().toLowerCase();
+  if(n==='armaan'||n==='usman') return 'groupA';
+  if(n==='karim'||n==='steve') return 'groupB';
+  return null;
+}
 function R_currentView(){
+  const lock=R_userLock();
+  if(lock) return lock;
   if(R_deviceView) return R_deviceView;
   const u = window.__userInfo && window.__userInfo();
-  if(u) return u.group;
+  if(u && u.group && u.group!=='all') return u.group;
   return (typeof RSTATE!=='undefined' && RSTATE && RSTATE.view) || 'all';
 }
 window.R_setDeviceView=function(v){
@@ -4320,6 +4379,8 @@ function R_redraw(){ R_buildTables(); R_drawMap(); R_scheduleFetchRoutes(); }
 
 // ---------- view filter (dropdown) ----------
 function R_applyView(view){
+  const lock=R_userLock();
+  if(lock) view=lock;
   R_deviceView=view;
   try{ localStorage.setItem('dpm.routeView', view); }catch(e){}
   const sel=document.getElementById('viewSelect'); if(sel && sel.value!==view) sel.value=view;
@@ -4535,6 +4596,12 @@ function R_wireToolbarOnce(){
 window.R_openRouteView = function(){
   R_wireToolbarOnce();
   if(!RSTATE) RSTATE = R_load() || R_freshState();
+  // Locked users have no View choice — they always see their own group.
+  const lock=R_userLock();
+  const vSel=document.getElementById('viewSelect');
+  const vLbl=document.querySelector('label[for="viewSelect"]');
+  if(vSel) vSel.style.display = lock ? 'none' : '';
+  if(vLbl) vLbl.style.display = lock ? 'none' : '';
   document.getElementById('viewSelect').value=R_currentView();
   R_updatePlanUI();
   R_updateVisitUI();
