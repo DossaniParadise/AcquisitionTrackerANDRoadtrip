@@ -717,7 +717,7 @@
               </button>
             </div>
             <div class="hidden flex-wrap items-center gap-1.5 w-full sm:w-auto" id="order-tools-editing">
-              <span class="text-[10px] font-bold text-neutral-500 flex-1 sm:flex-initial">Type new position numbers, then save. Nothing is written until you do.</span>
+              <span class="text-[10px] font-bold text-neutral-500 flex-1 sm:flex-initial">Type target positions into any boxes — nothing moves or saves until you press Save order.</span>
               <button data-action="save-order-edit" class="flex-1 sm:flex-initial bg-green-600 text-white hover:bg-green-700 font-bold text-[11px] px-4 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
                 <i data-lucide="check" class="w-3.5 h-3.5"></i> Save order
               </button>
@@ -2299,10 +2299,10 @@
               // on-device draft. NOTHING is written until "Save order".
               row.innerHTML = `
                 <div class="flex items-center gap-2.5 flex-1 min-w-0">
-                  <input type="number" inputmode="numeric" min="1" max="${list.length}" value="${itemIdx + 1}"
+                  <input type="number" inputmode="numeric" min="1" max="${list.length}" value="${itemIdx + 1}" data-orig="${itemIdx + 1}"
                     data-action="set-item-position" data-collection="${targetCollection}" data-id="${item.id}"
                     class="w-14 shrink-0 text-center bg-white border-2 border-[#1E3A8A]/30 rounded-lg px-1 py-1.5 text-xs font-extrabold font-mono"
-                    title="Type a position number — saved only when you press Save order">
+                    title="Type where this item should go — nothing moves until Save order">
                   <span class="text-xs font-bold text-neutral-850 break-words min-w-0">${escapeHtml(item.name)}</span>
                   ${nonPill}
                 </div>
@@ -3667,6 +3667,31 @@
         const coll = window.__orderDraftColl;
         const draft = window.__orderDraft;
         if (!coll || !draft) { window.state.orderEditMode = false; renderSettingsItems(); return; }
+
+        // Read every typed target straight from the boxes (DOM order = current
+        // order) and resolve them all together: changed items are placed at
+        // their requested slots (lowest first; ties keep list order), unchanged
+        // items keep their relative order and fill the gaps.
+        const inputs = Array.from(document.querySelectorAll(`input[data-action="set-item-position"][data-collection="${coll}"]`));
+        const byId = new Map(draft.map(x => [x.id, x]));
+        const movedReqs = [];
+        const rest = [];
+        inputs.forEach((inp, idx) => {
+          const item = byId.get(inp.getAttribute('data-id'));
+          if (!item) return;
+          let req = parseInt(inp.value, 10);
+          if (isNaN(req)) req = idx + 1;
+          req = Math.min(Math.max(req, 1), draft.length);
+          if (req !== idx + 1) movedReqs.push({ item, req, origIdx: idx });
+          else rest.push(item);
+        });
+        // ties on the same requested slot: the item that was higher in the
+        // list wins the exact slot (it's inserted last, so it lands on top)
+        movedReqs.sort((a, b) => (a.req - b.req) || (b.origIdx - a.origIdx));
+        const resolved = [...rest];
+        movedReqs.forEach(m => resolved.splice(Math.min(m.req - 1, resolved.length), 0, m.item));
+        window.__orderDraft = resolved;
+        const finalDraft = resolved;
         // Backup the pre-edit cloud order for Undo
         const before = (coll === 'facilityCategories') ? window.state.facilityCategories : window.state.equipmentList;
         try {
@@ -3680,12 +3705,12 @@
         orderWriteInFlight = true;
         try {
           const batch = writeBatch(db);
-          draft.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
+          finalDraft.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
           await batch.commit();
           // optimistic local apply so the list is instantly correct
-          draft.forEach((x, i) => { x.order = i; });
-          if (coll === 'facilityCategories') window.state.facilityCategories = draft;
-          else window.state.equipmentList = draft;
+          finalDraft.forEach((x, i) => { x.order = i; });
+          if (coll === 'facilityCategories') window.state.facilityCategories = finalDraft;
+          else window.state.equipmentList = finalDraft;
           dismissOverlay();
           sendNotification("Order saved — one write, fully synced.", "success");
         } catch (err) {
@@ -3913,22 +3938,20 @@
 
       // Editable position numbers in Settings -> Equipment. Typing 16 moves the
       // item into slot 16 and pushes the old #16 down to #17.
-      // Position numbers exist only inside Edit-order mode. Reordering here is
-      // purely local (the draft) — Firestore is untouched until "Save order".
+      // Edit-order mode: typing a number changes NOTHING on screen — all the
+      // other numbers stay put so several moves can be planned at once. The
+      // typed targets are read from the boxes and applied together on Save.
       if (target && target.getAttribute('data-action') === 'set-item-position') {
-        const draft = window.__orderDraft;
-        if (!window.state.orderEditMode || !draft) { renderSettingsItems(); return; }
-        const id = target.getAttribute('data-id');
-        const fromIdx = draft.findIndex(x => x.id === id);
-        if (fromIdx === -1) return;
-        let toIdx = parseInt(target.value, 10);
-        if (isNaN(toIdx)) { renderSettingsItems(); return; }
-        toIdx = Math.min(Math.max(toIdx, 1), draft.length) - 1;
-        try { target.blur(); } catch (err) {}
-        if (toIdx === fromIdx) { renderSettingsItems(); return; }
-        const [moved] = draft.splice(fromIdx, 1);
-        draft.splice(toIdx, 0, moved);
-        renderSettingsItems();
+        if (!window.state.orderEditMode) return;
+        let v = parseInt(target.value, 10);
+        const max = (window.__orderDraft || []).length || 1;
+        if (isNaN(v)) { target.value = target.getAttribute('data-orig') || ''; return; }
+        v = Math.min(Math.max(v, 1), max);
+        target.value = v;
+        // highlight boxes that differ from their current position
+        const changed = String(v) !== (target.getAttribute('data-orig') || '');
+        target.classList.toggle('ring-2', changed);
+        target.classList.toggle('ring-[#EA580C]', changed);
         return;
       }
 
