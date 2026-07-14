@@ -1908,6 +1908,16 @@
     }
 
     // WORKSPACE UI RENDERS
+    // Who can inspect which stores: Armaan -> Group A's; Karim & Steve ->
+    // Group B's; Usman & Saskya -> all 24. Always in route order.
+    function orderedInspectStoreNames() {
+      const by = window.R_routeStoreNamesByGroup ? window.R_routeStoreNamesByGroup() : { groupA: [], groupB: [] };
+      const n = (localStorage.getItem('dpm.userName') || '').trim().toLowerCase();
+      if (n === 'armaan') return by.groupA;
+      if (n === 'karim' || n === 'steve') return by.groupB;
+      return [...by.groupA, ...by.groupB];
+    }
+
     function renderStoreSelections() {
       const select = document.getElementById('select-store-input');
       if (!select) return;
@@ -1917,8 +1927,9 @@
         nameInput.value = localStorage.getItem('dpm.userName') || localStorage.getItem('dpm.lastInspector') || '';
       }
       select.innerHTML = '';
-      
-      if (window.state.stores.length === 0) {
+
+      const routeNames = orderedInspectStoreNames();
+      if (routeNames.length === 0 && window.state.stores.length === 0) {
         select.innerHTML = `<option value="">No stores configuration. Edit settings.</option>`;
         return;
       }
@@ -1930,8 +1941,15 @@
       defaultOpt.selected = !window.state.selectedStore;
       select.appendChild(defaultOpt);
 
-      const sorted = sortStores(visibleStores());
-      sorted.forEach(store => {
+      // Route order is THE order (stop 1 first). Cluster tags come along when
+      // the store exists in the stores collection.
+      const byLower = new Map(window.state.stores.map(st => [String(st.name || '').trim().toLowerCase(), st]));
+      const seen = new Set();
+      routeNames.forEach(rn => {
+        const key = String(rn).trim().toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        const store = byLower.get(key) || { name: rn, cluster: '' };
         const opt = document.createElement('option');
         opt.value = store.name;
         opt.innerText = store.cluster ? `[${store.cluster}] ${store.name}` : store.name;
@@ -2036,7 +2054,7 @@
       } else {
         list = window.state.equipmentList;
         targetCollection = 'equipmentList';
-        container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5";
+        container.className = "space-y-2 max-w-2xl";
         if (inputAddLabel) inputAddLabel.innerText = "Add New Equipment Item";
         if (settingsInput) settingsInput.placeholder = "Type name here...";
         if (settingsCluster) settingsCluster.classList.add('hidden');
@@ -2057,7 +2075,7 @@
         return;
       }
 
-      list.forEach(item => {
+      list.forEach((item, itemIdx) => {
         const row = document.createElement('div');
         const isConfirmingDelete = (window.state.confirmDeleteId === item.id);
 
@@ -2127,31 +2145,47 @@
           } else {
             const isEquip = (targetCollection === 'equipmentList');
             const isNon = isEquip && !!item.noncritical;
-            row.innerHTML = `
-              <div class="flex items-center gap-2 flex-1 mr-4 min-w-0">
-                <span class="text-xs font-bold text-neutral-850 truncate">${escapeHtml(item.name)}</span>
-                ${isNon ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-neutral-200 text-neutral-500 shrink-0">Non-vital</span>' : ''}
-              </div>
-              <div class="flex items-center gap-1 shrink-0">
-                ${isEquip ? `
-                <span class="flex items-center gap-1.5" title="${isNon ? 'Non-vital — tap to make vital' : 'Vital — tap to make non-vital'}">
-                  <span class="text-[8px] font-extrabold uppercase tracking-wider ${isNon ? 'text-red-500' : 'text-green-600'}">${isNon ? 'Non-vital' : 'Vital'}</span>
-                  <button data-action="toggle-equipment-critical" data-item="${escapeHtml(item.name)}" role="switch" aria-checked="${!isNon}" class="eq-switch ${isNon ? 'eq-off' : ''}"><span class="eq-knob pointer-events-none"></span></button>
-                </span>
-                <div class="w-px h-4 bg-neutral-200 mx-1"></div>
-                ` : ''}
-                <button data-action="reorder-item-up" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Up">
-                  <i data-lucide="chevron-up" class="w-4 h-4"></i>
-                </button>
-                <button data-action="reorder-item-down" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Down">
-                  <i data-lucide="chevron-down" class="w-4 h-4"></i>
-                </button>
-                <div class="w-px h-4 bg-neutral-200 mx-1.5"></div>
-                <button data-action="delete-settings-item" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-red-700 transition p-1 cursor-pointer" title="Delete">
-                  <i data-lucide="x" class="w-4 h-4"></i>
-                </button>
-              </div>
-            `;
+            if (isEquip) {
+              // Equipment: editable position number — type 16 and the item jumps
+              // to slot 16, pushing everything below it down one.
+              row.innerHTML = `
+                <div class="flex items-center gap-2.5 flex-1 mr-3 min-w-0">
+                  <input type="number" inputmode="numeric" min="1" max="${list.length}" value="${itemIdx + 1}"
+                    data-action="set-item-position" data-collection="equipmentList" data-id="${item.id}"
+                    class="w-14 shrink-0 text-center bg-white border border-neutral-200 rounded-lg px-1 py-1.5 text-xs font-extrabold font-mono"
+                    title="Type a position number to move this item">
+                  <span class="text-xs font-bold text-neutral-850 break-words min-w-0">${escapeHtml(item.name)}</span>
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <span class="flex items-center gap-1.5" title="${isNon ? 'Non-vital — tap to make vital' : 'Vital — tap to make non-vital'}">
+                    <span class="text-[8px] font-extrabold uppercase tracking-wider ${isNon ? 'text-red-500' : 'text-green-600'}">${isNon ? 'Non-vital' : 'Vital'}</span>
+                    <button data-action="toggle-equipment-critical" data-item="${escapeHtml(item.name)}" role="switch" aria-checked="${!isNon}" class="eq-switch ${isNon ? 'eq-off' : ''}"><span class="eq-knob pointer-events-none"></span></button>
+                  </span>
+                  <div class="w-px h-4 bg-neutral-200 mx-1"></div>
+                  <button data-action="delete-settings-item" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-red-700 transition p-1 cursor-pointer" title="Delete">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              `;
+            } else {
+              row.innerHTML = `
+                <div class="flex items-center gap-2 flex-1 mr-4 min-w-0">
+                  <span class="text-xs font-bold text-neutral-850 truncate">${escapeHtml(item.name)}</span>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button data-action="reorder-item-up" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Up">
+                    <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                  </button>
+                  <button data-action="reorder-item-down" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Down">
+                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                  </button>
+                  <div class="w-px h-4 bg-neutral-200 mx-1.5"></div>
+                  <button data-action="delete-settings-item" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-red-700 transition p-1 cursor-pointer" title="Delete">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              `;
+            }
           }
         }
         
@@ -2823,8 +2857,10 @@
       if (nameInput) nameInput.value = name;
       // Point the route view at their group (a manual View change still wins later).
       if (info && opts.setRouteView !== false && window.R_setDeviceView) {
-        window.R_setDeviceView(info.group);
+        window.R_setDeviceView(info.group === 'all' ? 'all' : info.group);
       }
+      // The Inspect store list is scoped per person — rebuild it.
+      try { renderStoreSelections(); } catch (e) {}
     }
     window.addEventListener('DOMContentLoaded', () => {
       if (window.lucide) lucide.createIcons();
@@ -3585,7 +3621,46 @@
 
     document.addEventListener('change', async (e) => {
       const target = e.target.closest('[data-action]');
-      
+
+      // Editable position numbers in Settings -> Equipment. Typing 16 moves the
+      // item into slot 16 and pushes the old #16 down to #17.
+      if (target && target.getAttribute('data-action') === 'set-item-position') {
+        const coll = target.getAttribute('data-collection');
+        const id = target.getAttribute('data-id');
+        const list = [...window.state.equipmentList];
+        const fromIdx = list.findIndex(x => x.id === id);
+        if (fromIdx === -1) return;
+        let toIdx = parseInt(target.value, 10);
+        if (isNaN(toIdx)) { renderSettingsItems(); return; }
+        toIdx = Math.min(Math.max(toIdx, 1), list.length) - 1;
+        if (toIdx === fromIdx) { renderSettingsItems(); return; }
+
+        // Safety net for Undo last reorder
+        try {
+          localStorage.setItem('dpm.orderBackup.' + coll, JSON.stringify({
+            at: Date.now(),
+            items: list.map((x, i) => ({ id: x.id, name: x.name, order: (x.order != null ? x.order : i), noncritical: !!x.noncritical }))
+          }));
+        } catch (err) {}
+
+        const [moved] = list.splice(fromIdx, 1);
+        list.splice(toIdx, 0, moved);
+        list.forEach((x, i) => { x.order = i; });
+        window.state.equipmentList = list;   // optimistic
+        renderSettingsItems();
+
+        try {
+          await Promise.all(list.map((item, index) =>
+            setDoc(doc(db, coll, item.id), { order: index }, { merge: true })
+          ));
+          sendNotification(`"${moved.name}" moved to #${toIdx + 1}.`, "success");
+        } catch (err) {
+          console.error("Position save failed", err);
+          sendNotification("Couldn't save the new order — check connection.", "error");
+        }
+        return;
+      }
+
       if (e.target.id === 'filter-store-select') {
         window.state.filterStore = e.target.value;
         renderOverviewCardsList();
@@ -4152,14 +4227,18 @@ function R_isPhone(){ return window.matchMedia('(max-width:767px)').matches; }
 // The 24 stores on the route plan are THE inspection stores. Everything
 // store-facing in the app filters to this list.
 window.R_routeStoreNames = function(){
+  const by = window.R_routeStoreNamesByGroup();
+  return [...by.groupA, ...by.groupB];
+};
+window.R_routeStoreNamesByGroup = function(){
   try{
     const st = (typeof RSTATE!=='undefined' && RSTATE) ? RSTATE : (R_load() || R_freshState());
-    const names=[];
+    const out={groupA:[],groupB:[]};
     for(const gk of ['groupA','groupB']){
-      (st.parties[gk].stops||[]).forEach(s=>{ if(s.kind==='store' && s.name) names.push(s.name); });
+      (st.parties[gk].stops||[]).forEach(s=>{ if(s.kind==='store' && s.name) out[gk].push(s.name); });
     }
-    return names;
-  }catch(e){ return []; }
+    return out;
+  }catch(e){ return {groupA:[],groupB:[]}; }
 };
 
 // ---- Device-local route view filter ----
@@ -4172,9 +4251,9 @@ try{ R_deviceView = localStorage.getItem('dpm.routeView') || null; }catch(e){}
 // is unrestricted and gets the full View dropdown.
 function R_userLock(){
   const n=(function(){try{return localStorage.getItem('dpm.userName')||''}catch(e){return ''}})().trim().toLowerCase();
-  if(n==='armaan'||n==='usman') return 'groupA';
+  if(n==='armaan') return 'groupA';
   if(n==='karim'||n==='steve') return 'groupB';
-  return null;
+  return null; // usman & saskya see everything
 }
 function R_currentView(){
   const lock=R_userLock();
