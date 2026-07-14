@@ -117,6 +117,9 @@
       transition: left .15s ease; }
     .eq-switch.eq-off { background: #dc2626; }
     .eq-switch.eq-off .eq-knob { left: 2px; }
+
+    /* Missing-item highlight after a blocked Finish */
+    .cl-card.cl-missing { box-shadow: 0 0 0 2.5px #dc2626, 0 4px 14px rgba(220,38,38,.18); }
   </style>
 
   <!-- Route planner deps -->
@@ -523,20 +526,24 @@
           <div class="space-y-4 max-w-2xl mx-auto w-full">
             <div id="equipment-vital-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
 
-            <!-- Non-vital items stay hidden until the inspector opts in -->
-            <div id="nonvital-prompt" class="bg-white border border-orange-100/60 p-5 rounded-3xl text-center space-y-3 shadow-sm">
-              <p class="text-sm font-bold text-[#1E3A8A]">Inspect non-vital equipment as well?</p>
-              <p class="text-[11px] text-neutral-500">Items marked non-vital in Settings <span id="noncritical-count" class="font-mono font-bold"></span></p>
+            <!-- Shown only once every vital item is complete -->
+            <div id="nonvital-prompt" class="hidden bg-white border border-green-200 p-5 rounded-3xl text-center space-y-3 shadow-sm">
+              <p class="text-xs font-extrabold text-green-600 uppercase tracking-widest flex items-center justify-center gap-1.5"><i data-lucide="check-circle-2" class="w-4 h-4"></i> All vital equipment done</p>
+              <p class="text-sm font-bold text-[#1E3A8A]">If you have extra time, would you like to go back and inspect non-vital equipment?</p>
+              <p class="text-[11px] text-neutral-500"><span id="noncritical-count" class="font-mono font-bold"></span> item(s) marked non-vital in Settings</p>
               <div class="grid grid-cols-2 gap-2.5 max-w-xs mx-auto">
-                <button data-action="set-nonvital-visible" data-val="yes" id="nonvital-yes" class="py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100">Yes</button>
-                <button data-action="set-nonvital-visible" data-val="no" id="nonvital-no" class="py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100">No</button>
+                <button data-action="set-nonvital-visible" data-val="yes" id="nonvital-yes" class="py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-[#EA580C] text-white border-transparent shadow-sm active:scale-95">Yes</button>
+                <button data-action="set-nonvital-visible" data-val="no" id="nonvital-no" class="py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100 active:scale-95">No</button>
               </div>
             </div>
 
             <div id="equipment-noncritical-wrap" class="hidden space-y-3">
-              <div class="flex items-center gap-2 py-1">
-                <span class="p-1 bg-neutral-400 text-white rounded-lg flex items-center justify-center"><i data-lucide="clock" class="w-3.5 h-3.5"></i></span>
-                <h3 class="text-xs font-extrabold text-neutral-500 uppercase tracking-widest">Non-Vital Equipment</h3>
+              <div class="flex items-center justify-between gap-2 py-1">
+                <div class="flex items-center gap-2">
+                  <span class="p-1 bg-neutral-400 text-white rounded-lg flex items-center justify-center"><i data-lucide="clock" class="w-3.5 h-3.5"></i></span>
+                  <h3 class="text-xs font-extrabold text-neutral-500 uppercase tracking-widest">Non-Vital Equipment</h3>
+                </div>
+                <button data-action="back-to-vital" class="text-[11px] font-bold text-[#EA580C] hover:underline flex items-center gap-1 cursor-pointer"><i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Vital items</button>
               </div>
               <div id="equipment-noncritical-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
             </div>
@@ -835,8 +842,11 @@
           <button data-action="close-lightbox" class="absolute -top-12 right-0 bg-white/10 hover:bg-white/20 p-2 text-white rounded-full transition flex items-center justify-center cursor-pointer">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
-          <img id="lightbox-image" class="max-h-[70vh] rounded-2xl shadow-2xl object-contain w-full" src="" alt="Zoomed view">
+          <img id="lightbox-image" class="max-h-[65vh] rounded-2xl shadow-2xl object-contain w-full" src="" alt="Zoomed view">
           <p id="lightbox-caption" class="text-xs text-neutral-300 bg-white/10 px-4 py-2 rounded-full text-center max-w-[90%]"></p>
+          <button data-action="lightbox-fullsize" class="text-xs font-bold text-white bg-white/15 hover:bg-white/25 px-4 py-2.5 rounded-full transition flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i> Open full size &mdash; then long-press to save to your gallery
+          </button>
         </div>
       </div>
 
@@ -881,6 +891,19 @@
     <h2>Route Map</h2>
   </div>
   <div class="mfs-body" id="map-fullscreen-body"></div>
+</div>
+
+<!-- Blocked-finish modal: lists vital items still missing a rating or photo -->
+<div id="missing-items-modal" class="hidden fixed inset-0 z-[10040] bg-black/55 items-center justify-center p-5" style="backdrop-filter:blur(2px)">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4">
+    <div class="space-y-1 text-center">
+      <span class="p-2 bg-red-50 text-red-600 rounded-2xl inline-flex"><i data-lucide="alert-triangle" class="w-5 h-5"></i></span>
+      <h2 class="text-base font-extrabold text-[#1E3A8A]">Some items still need attention</h2>
+      <p class="text-[11px] text-neutral-500">Every vital item needs a rating or a photo before finishing.</p>
+    </div>
+    <div id="missing-items-list" class="max-h-52 overflow-y-auto space-y-1.5 text-left"></div>
+    <button onclick="window.__reviewMissing && window.__reviewMissing()" class="w-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-sm py-3 rounded-2xl transition active:scale-95 cursor-pointer">Take me to them</button>
+  </div>
 </div>
 
 <!-- Identity gate: the app is unusable until a name is picked -->
@@ -948,7 +971,8 @@
       onSnapshot,
       setLogLevel,
       FieldPath,
-      arrayUnion
+      arrayUnion,
+      writeBatch
     } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
     // Firebase Credentials
@@ -1005,6 +1029,10 @@
     window.updateOnlineStatus = updateOnlineStatus;
 
     // GLOBAL SYSTEM STATE
+    // While an order rewrite is committing, snapshot echoes must not re-render
+    // the Settings list (that's what made items "come again" mid-edit).
+    let orderWriteInFlight = false;
+
     // Which checklist cards have their Notes & Photos section open on mobile.
     // Lives outside window.state so it never syncs/serializes anywhere.
     window.__expandedCards = {};
@@ -1023,7 +1051,8 @@
       facilityAnswers: {},
       equipmentAnswers: {},
       activeEquipmentIndex: 0,
-      showNonVital: false, // "Inspect non-vital equipment as well?" answer
+      showNonVital: false,  // true = the checklist is currently showing ONLY non-vital items
+      nonVitalAsked: false,  // the "extra time?" question was answered this inspection
       
       // Settings management state
       settingsTab: 'stores',
@@ -1152,6 +1181,68 @@
     }
     window.ensureRouteStoresExist = ensureRouteStoresExist;
 
+    // =========================================================================
+    // FINISH VALIDATION — every vital item needs a rating OR a photo. Missing
+    // ones block Finish, get listed, highlighted red, and scrolled to.
+    // Note: answers maps are live-merged from all inspectors, so a teammate's
+    // completed items count as done on this device too.
+    // =========================================================================
+    function missingVitalItems(scope) {
+      const out = { facility: [], equipment: [] };
+      if (scope === 'facility' || scope === 'both') {
+        window.state.facilityCategories.forEach(c => {
+          if (!answerHasContent(window.state.facilityAnswers[c.name])) out.facility.push(c.name);
+        });
+      }
+      if (scope === 'equipment' || scope === 'both') {
+        window.state.equipmentList.filter(e => !e.noncritical).forEach(e => {
+          if (!answerHasContent(window.state.equipmentAnswers[e.name])) out.equipment.push(e.name);
+        });
+      }
+      out.total = out.facility.length + out.equipment.length;
+      return out;
+    }
+
+    let __missingNow = null;
+    function showMissingItemsModal(missing) {
+      __missingNow = missing;
+      const listEl = document.getElementById('missing-items-list');
+      if (listEl) {
+        const row = (kind, name) => `<div class="flex items-center gap-2 bg-red-50/60 border border-red-100 rounded-xl px-3 py-2">
+          <span class="text-[8px] font-extrabold uppercase tracking-wider text-red-400 shrink-0">${kind}</span>
+          <span class="text-xs font-bold text-neutral-800 min-w-0 break-words">${escapeHtml(name)}</span>
+        </div>`;
+        listEl.innerHTML =
+          missing.facility.map(n => row('FAC', n)).join('') +
+          missing.equipment.map(n => row('EQP', n)).join('');
+      }
+      const m = document.getElementById('missing-items-modal');
+      if (m) { m.classList.remove('hidden'); m.classList.add('flex'); }
+      if (window.lucide) lucide.createIcons();
+    }
+    window.__reviewMissing = function () {
+      const m = document.getElementById('missing-items-modal');
+      if (m) { m.classList.add('hidden'); m.classList.remove('flex'); }
+      const miss = __missingNow;
+      if (!miss || !miss.total) return;
+      const kind = miss.facility.length ? 'facility' : 'equipment';
+      const names = kind === 'facility' ? miss.facility : miss.equipment;
+      names.forEach(n => { window.__expandedCards[kind + '::' + n] = true; });
+      if (kind === 'equipment') window.state.showNonVital = false; // vitals must be visible
+      if (window.state.currentView !== kind) navigate(kind);
+      else rerenderChecklistSoft();
+      // highlight + scroll after the re-render settles
+      setTimeout(() => {
+        let first = null;
+        names.forEach(n => {
+          document.querySelectorAll(`.cl-card[data-cl-kind="${kind}"]`).forEach(c => {
+            if (c.dataset.clItem === n) { c.classList.add('cl-missing'); if (!first) first = c; }
+          });
+        });
+        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 120);
+    };
+
     // ONE rule for the whole app: an item only counts as a real observation
     // if it has a rating OR at least one photo. A photo with no rating counts
     // as "Good". Everything else is an empty placeholder and never shows up.
@@ -1230,7 +1321,7 @@
         });
         window.state.facilityCategories = sortOrderedList(raw);
         renderOverviewItemFilters();
-        if (window.state.currentView === 'settings' && !window.state.editingStoreId) renderSettingsItems();
+        if (window.state.currentView === 'settings' && !window.state.editingStoreId && !orderWriteInFlight) renderSettingsItems();
         if (window.state.currentView === 'facility') rerenderChecklistSoft();
       }, (err) => { console.error("Facility categories sync error:", err); });
 
@@ -1241,7 +1332,7 @@
         });
         window.state.equipmentList = sortOrderedList(raw);
         renderOverviewItemFilters();
-        if (window.state.currentView === 'settings' && !window.state.editingStoreId) renderSettingsItems();
+        if (window.state.currentView === 'settings' && !window.state.editingStoreId && !orderWriteInFlight) renderSettingsItems();
         if (window.state.currentView === 'equipment') rerenderChecklistSoft();
       }, (err) => { console.error("Equipment list sync error:", err); });
     }
@@ -1690,6 +1781,12 @@
             // pull in any NEW photos teammates added so nothing goes missing.
             const have = new Set((local.photos || []).map(p => p.id || p.url));
             remotePhotos.forEach(rp => { if (!have.has(rp.id)) local.photos.push(rp); });
+            // Concurrency guard: adopt teammates' values into fields WE haven't
+            // touched, so our upcoming flush can't blank out their work (e.g.
+            // we're mid-photo-upload while they rate the same item).
+            if (!local.rating && remote.rating) local.rating = remote.rating;
+            if (!(local.comment || '').trim() && remote.comment) local.comment = remote.comment;
+            if (kind === 'equipment' && (local.quantity == null || local.quantity === 1) && remote.quantity > 1) local.quantity = remote.quantity;
             return;
           }
 
@@ -2269,6 +2366,8 @@
           || (ans.photos || []).some(p => p.status === 'failed');
         const card = document.createElement('div');
         card.className = "cl-card bg-white p-4 rounded-3xl border border-orange-100/65 shadow-xs space-y-3" + (isExpanded ? " expanded" : "");
+        card.dataset.clKind = 'facility';
+        card.dataset.clItem = cat;
         card.innerHTML = `
           <div class="flex items-center gap-2">
             <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Upload from gallery">
@@ -2334,27 +2433,27 @@
       });
 
       const nc = document.getElementById('noncritical-count');
-      if (nc) nc.textContent = nonN ? `(${nonN})` : '';
+      if (nc) nc.textContent = String(nonN);
       if (vitalN === 0) {
         vitalList.innerHTML = `<div class="p-6 text-center text-neutral-300 text-[11px] font-medium border border-dashed border-neutral-200 rounded-2xl">No vital items \u2014 everything is marked non-vital in Settings.</div>`;
       }
 
-      // The non-vital section only exists once the inspector answers "Yes".
+      // FLOW: vitals only (in saved order) -> once every vital item is complete,
+      // the "extra time?" question appears -> Yes swaps the page to ONLY the
+      // non-vital list; No dismisses the question for this inspection.
       const promptEl = document.getElementById('nonvital-prompt');
       const wrapEl = document.getElementById('equipment-noncritical-wrap');
-      const yesBtn = document.getElementById('nonvital-yes');
-      const noBtn = document.getElementById('nonvital-no');
-      const show = !!window.state.showNonVital;
-      if (nonN === 0) {
-        if (promptEl) promptEl.classList.add('hidden');
-        if (wrapEl) wrapEl.classList.add('hidden');
-      } else {
-        if (promptEl) promptEl.classList.remove('hidden');
-        if (wrapEl) wrapEl.classList.toggle('hidden', !show);
-        const on = "py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-[#EA580C] text-white border-transparent shadow-sm";
-        const off = "py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100";
-        if (yesBtn) yesBtn.className = show ? on : off;
-        if (noBtn) noBtn.className = show ? off : on;
+      const showingNonVital = !!window.state.showNonVital;
+
+      const allVitalDone = window.state.equipmentList
+        .filter(e => !e.noncritical)
+        .every(e => answerHasContent(window.state.equipmentAnswers[e.name]));
+
+      if (vitalList) vitalList.classList.toggle('hidden', showingNonVital);
+      if (wrapEl) wrapEl.classList.toggle('hidden', !showingNonVital || nonN === 0);
+      if (promptEl) {
+        const showPrompt = !showingNonVital && nonN > 0 && vitalN > 0 && allVitalDone && !window.state.nonVitalAsked;
+        promptEl.classList.toggle('hidden', !showPrompt);
       }
 
       if (window.lucide) lucide.createIcons();
@@ -2418,6 +2517,8 @@
         || (ans.photos || []).some(p => p.status === 'failed');
       const card = document.createElement('div');
       card.className = "cl-card bg-white p-4 rounded-3xl border shadow-xs space-y-3 " + (isNon ? "border-neutral-200" : "border-orange-100/65") + (isExpanded ? " expanded" : "");
+      card.dataset.clKind = 'equipment';
+      card.dataset.clItem = eq;
       card.innerHTML = `
         <div class="flex items-center gap-2">
           <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Upload from gallery">
@@ -3063,7 +3164,8 @@
           dismissOverlay();
           sendNotification(existingData ? "Linked to active inspection record" : "Inbound new live session initialized", "success");
 
-          window.state.showNonVital = false; // fresh inspection: ask again
+          window.state.showNonVital = false;  // fresh inspection: vitals first
+          window.state.nonVitalAsked = false; // and the extra-time question resets
           if (modeVal === 'facility' || modeVal === 'both') {
             navigate('facility');
           } else {
@@ -3100,8 +3202,17 @@
       }
 
       if (action === 'set-nonvital-visible') {
-        window.state.showNonVital = (target.getAttribute('data-val') === 'yes');
+        const yes = (target.getAttribute('data-val') === 'yes');
+        window.state.nonVitalAsked = true;
+        window.state.showNonVital = yes;
         renderEquipmentChecklist();
+        if (yes) window.scrollTo(0, 0);
+      }
+
+      if (action === 'back-to-vital') {
+        window.state.showNonVital = false;
+        renderEquipmentChecklist();
+        window.scrollTo(0, 0);
       }
 
       if (action === 'toggle-card-details') {
@@ -3173,6 +3284,10 @@
       }
 
       if (action === 'next-facility') {
+        // Gate: every facility item needs a rating or a photo before moving on.
+        // Teammates' synced entries count — the check runs on the merged state.
+        const missF = missingVitalItems('facility');
+        if (missF.total > 0) { showMissingItemsModal(missF); return; }
         await saveImmediately();
         const stillUploading = pendingUploadCount();
         if (stillUploading > 0) {
@@ -3214,6 +3329,30 @@
       }
 
       if (action === 'finish-equipment') {
+        // Gate 1: every vital item (facility too, on a Both audit) needs a
+        // rating or a photo. Missing ones block, get listed and highlighted.
+        const scope = (window.state.selectedMode === 'both') ? 'both' : 'equipment';
+        const missE = missingVitalItems(scope);
+        if (missE.total > 0) { showMissingItemsModal(missE); return; }
+        // Gate 2: the extra-time question, if it hasn't been answered yet.
+        const nonVitalItems = window.state.equipmentList.filter(e => e.noncritical);
+        if (!window.state.showNonVital && !window.state.nonVitalAsked && nonVitalItems.length > 0) {
+          showCustomConfirm(
+            "Extra time?",
+            `Would you like to go back and inspect the ${nonVitalItems.length} non-vital equipment item(s) before finishing?`,
+            () => { // Yes — switch to the non-vital list
+              window.state.nonVitalAsked = true;
+              window.state.showNonVital = true;
+              renderEquipmentChecklist();
+              window.scrollTo(0, 0);
+            },
+            () => { // No — remember the answer and finish normally
+              window.state.nonVitalAsked = true;
+              document.querySelector('[data-action="finish-equipment"]').click();
+            }
+          );
+          return;
+        }
         await saveImmediately();
         const stillUploading = pendingUploadCount();
         if (stillUploading > 0) {
@@ -3232,6 +3371,15 @@
         if (zoomCap) zoomCap.innerText = caption || "No caption remarks set";
         const lBox = document.getElementById('lightbox-modal');
         if (lBox) lBox.classList.remove('hidden');
+      }
+
+      if (action === 'lightbox-fullsize') {
+        const img = document.getElementById('lightbox-image');
+        if (img && img.src && !img.src.startsWith('blob:')) {
+          window.open(img.src, '_blank');
+        } else {
+          sendNotification("This photo is still uploading — try again once it finishes.", "info");
+        }
       }
 
       if (action === 'close-lightbox') {
@@ -3298,18 +3446,20 @@
         list[idx + neighborShift] = temp;
 
         presentOverlay("Arranging list", "Adjusting cloud priority sequence...");
+        orderWriteInFlight = true;
         try {
-          const promises = list.map((item, index) => {
-            return updateDoc(doc(db, coll, item.id), { order: index });
-          });
-          await Promise.all(promises);
+          const batch = writeBatch(db);
+          list.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
+          await batch.commit();
           dismissOverlay();
           sendNotification("Assigned order sequence updated!", "success");
-          await loadCollectionsFromCloud();
         } catch (err) {
           console.error("Order persist failed", err);
           dismissOverlay();
           sendNotification("Failed storing order.", "error");
+        } finally {
+          orderWriteInFlight = false;
+          if (window.state.currentView === 'settings') renderSettingsItems();
         }
       }
 
@@ -3429,19 +3579,25 @@
           `Restores ${backup.items.length} item(s) to the order saved ${new Date(backup.at).toLocaleString()} on this device. Items added since then are kept.`,
           async () => {
             presentOverlay("Restoring order", "Writing the saved sequence back to Firestore...");
+            orderWriteInFlight = true;
             try {
-              await Promise.all(backup.items.map(it => setDoc(
+              const batch = writeBatch(db);
+              backup.items.forEach(it => batch.set(
                 doc(db, coll, it.id),
                 Object.assign({ name: it.name, order: it.order },
                   coll === 'equipmentList' ? { noncritical: !!it.noncritical } : {}),
                 { merge: true }
-              )));
+              ));
+              await batch.commit();
               dismissOverlay();
               sendNotification("Order restored from this device's backup.", "success");
             } catch (err) {
               console.error("Undo reorder failed:", err);
               dismissOverlay();
               sendNotification("Restore failed: " + err.message, "error");
+            } finally {
+              orderWriteInFlight = false;
+              if (window.state.currentView === 'settings') renderSettingsItems();
             }
           }
         );
@@ -3494,15 +3650,13 @@
 
         presentOverlay("Synchronizing Sequence", "Updating items and removing deleted configurations...");
         try {
-          const writePromises = itemsToWrite.map(item => {
-            // merge:true — a reorder must never wipe other fields (e.g. the
-            // equipment vital/non-vital flag)
-            return setDoc(doc(db, coll, item.id), { name: item.name, order: item.order }, { merge: true });
-          });
-          const deletePromises = itemsToDelete.map(item => {
-            return deleteDoc(doc(db, coll, item.id));
-          });
-          await Promise.all([...writePromises, ...deletePromises]);
+          // merge:true — a reorder must never wipe other fields (e.g. the
+          // equipment vital/non-vital flag). One atomic batch = one snapshot.
+          orderWriteInFlight = true;
+          const batch = writeBatch(db);
+          itemsToWrite.forEach(item => batch.set(doc(db, coll, item.id), { name: item.name, order: item.order }, { merge: true }));
+          itemsToDelete.forEach(item => batch.delete(doc(db, coll, item.id)));
+          try { await batch.commit(); } finally { orderWriteInFlight = false; }
           dismissOverlay();
           sendNotification("All sequence lines synced to Firebase!", "success");
           
@@ -3625,6 +3779,7 @@
       // Editable position numbers in Settings -> Equipment. Typing 16 moves the
       // item into slot 16 and pushes the old #16 down to #17.
       if (target && target.getAttribute('data-action') === 'set-item-position') {
+        if (orderWriteInFlight) { renderSettingsItems(); return; } // one move at a time
         const coll = target.getAttribute('data-collection');
         const id = target.getAttribute('data-id');
         const list = [...window.state.equipmentList];
@@ -3647,16 +3802,23 @@
         list.splice(toIdx, 0, moved);
         list.forEach((x, i) => { x.order = i; });
         window.state.equipmentList = list;   // optimistic
+        try { target.blur(); } catch (err) {}
         renderSettingsItems();
 
+        // ONE atomic batch commit — a single snapshot echo, never the
+        // half-written intermediate orders that made items reshuffle.
+        orderWriteInFlight = true;
         try {
-          await Promise.all(list.map((item, index) =>
-            setDoc(doc(db, coll, item.id), { order: index }, { merge: true })
-          ));
+          const batch = writeBatch(db);
+          list.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
+          await batch.commit();
           sendNotification(`"${moved.name}" moved to #${toIdx + 1}.`, "success");
         } catch (err) {
           console.error("Position save failed", err);
           sendNotification("Couldn't save the new order — check connection.", "error");
+        } finally {
+          orderWriteInFlight = false;
+          if (window.state.currentView === 'settings') renderSettingsItems();
         }
         return;
       }
