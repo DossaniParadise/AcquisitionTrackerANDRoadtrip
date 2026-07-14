@@ -7,7 +7,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="DPM Acquisition Tracker">
+  <meta name="apple-mobile-web-app-title" content="DPM Tracker">
   <title>DPM Acquisition Tracker</title>
   
   <!-- Premium Hospitality/Restaurant Brand Tailwind CSS Config -->
@@ -2249,8 +2249,8 @@
         seen.add(key);
         const store = byLower.get(key) || { name: rn, cluster: '' };
         const opt = document.createElement('option');
-        opt.value = store.name;
-        opt.innerText = store.cluster ? `[${store.cluster}] ${store.name}` : store.name;
+        opt.value = store.name; // identity stays the bare name
+        opt.innerText = store.cluster ? `[${store.cluster}] ${window.storeLabel(store.name)}` : window.storeLabel(store.name);
         opt.selected = (store.name === window.state.selectedStore);
         select.appendChild(opt);
       });
@@ -2263,8 +2263,8 @@
       const sorted = sortStores(visibleStores());
       sorted.forEach(store => {
         const opt = document.createElement('option');
-        opt.value = store.name;
-        opt.innerText = store.cluster ? `[${store.cluster}] ${store.name}` : store.name;
+        opt.value = store.name; // identity stays the bare name
+        opt.innerText = store.cluster ? `[${store.cluster}] ${window.storeLabel(store.name)}` : window.storeLabel(store.name);
         select.appendChild(opt);
       });
     }
@@ -2301,7 +2301,7 @@
         const cur = sel.value;
         const names = (window.R_routeStoreNames ? window.R_routeStoreNames() : []);
         sel.innerHTML = '<option value="">Choose store…</option>' +
-          names.map(n => `<option value="${escapeHtml(n)}" ${n === cur ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+          names.map(n => `<option value="${escapeHtml(n)}" ${n === cur ? 'selected' : ''}>${escapeHtml(window.storeLabel(n))}</option>`).join('');
       }
     }
     window.renderAdminOptions = renderAdminOptions;
@@ -2973,7 +2973,7 @@
         tile.innerHTML = `
           <div class="space-y-0.5 leading-tight">
             <div class="flex items-center gap-1.5 justify-between">
-              <h4 class="text-xs font-bold text-neutral-800 truncate flex-1 min-w-0">${escapeHtml(S.name)}</h4>
+              <h4 class="text-xs font-bold text-neutral-800 truncate flex-1 min-w-0">${escapeHtml(window.storeLabel(S.name))}</h4>
               ${S.cluster ? `
                 <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[7.5px] font-extrabold uppercase shrink-0" style="${getClusterBadgeStyle(S.cluster)}">
                   ${escapeHtml(S.cluster)}
@@ -3110,7 +3110,7 @@
           <div class="space-y-0.5">
             <h3 class="text-sm font-bold text-neutral-900">${targetName}</h3>
             <div class="flex flex-wrap items-center gap-1 text-[11px] text-neutral-400 font-medium">
-              <span class="text-neutral-800 font-semibold">${escapeHtml(insp.store)}</span>
+              <span class="text-neutral-800 font-semibold">${escapeHtml(window.storeLabel(insp.store))}</span>
               ${insp.auditorName ? `<span>• Checked by: <strong>${escapeHtml(insp.auditorName)}</strong></span>` : ''}
               <span>•</span>
               <span>${insp.dateString}</span>
@@ -3210,11 +3210,11 @@
         if (subtitleEl) subtitleEl.innerText = "Checklist Target Selection";
       } else if (viewName === 'facility') {
         const storeName = (window.state.selectedStore || '').trim();
-        if (titleEl) titleEl.innerText = storeName || "Facility Checklist";
+        if (titleEl) titleEl.innerText = storeName ? window.storeLabel(storeName) : "Facility Checklist";
         if (subtitleEl) subtitleEl.innerText = storeName ? "Facility Checklist" : "Exterior/Interior Physical Walkthrough";
       } else if (viewName === 'equipment') {
         const storeName = (window.state.selectedStore || '').trim();
-        if (titleEl) titleEl.innerText = storeName || "Equipment Checklist";
+        if (titleEl) titleEl.innerText = storeName ? window.storeLabel(storeName) : "Equipment Checklist";
         if (subtitleEl) subtitleEl.innerText = storeName ? "Equipment Checklist" : "Machinery & Electrical Unit Checks";
       } else if (viewName === 'overview') {
         if (titleEl) titleEl.innerText = "Results";
@@ -4695,7 +4695,7 @@ function R_buildTables(){
         <td class="td-time">${R_fmt(t.depart)}</td>
         <td class="td-dur">${t.dur?R_fmtDur(t.dur):'—'}</td>
         <td>
-          <div class="stopname"><span class="stopnum" style="background:${col}">${dispNum}</span><span class="${isStore?'storelink':''}" ${isStore?`data-routeaction="store-modal" data-store="${R_escapeAttr(s.name)}" data-group="${gk}"`:''}>${R_escapeHtml(s.name)}</span>${t.pinned?'<span class="tag-pin">pinned</span>':''}${statusPill}</div>
+          <div class="stopname"><span class="stopnum" style="background:${col}">${dispNum}</span><span class="${isStore?'storelink':''}" ${isStore?`data-routeaction="store-modal" data-store="${R_escapeAttr(s.name)}" data-group="${gk}"`:''}>${R_escapeHtml(isStore?window.storeLabel(s.name):s.name)}</span>${t.pinned?'<span class="tag-pin">pinned</span>':''}${statusPill}</div>
           <div class="stopmeta">${R_escapeHtml(s.addr)} &middot; <a class="maplink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${gq}">map</a></div>
           ${t.conflict?`<div class="conflict-note">⚠ Arrives before you could leave the previous stop (feasible ~${R_fmt(t.earliest)}). Kept as entered.</div>`:''}
         </td>
@@ -4851,6 +4851,29 @@ let R_map=null;
 let R_layerGroups={};
 function R_isPhone(){ return window.matchMedia('(max-width:767px)').matches; }
 
+// Official store numbers, keyed by base name (parenthetical city stripped).
+// DISPLAY ONLY: identity, matching, and doc ids stay name-based so nothing
+// in existing records breaks.
+window.STORE_NUMBERS = {
+  // Group A
+  'copperas cove':'2479','clear creek':'23481','west stan':'29475','fort hood':'28516',
+  'rancier':'2807','stan':'24689','harker heights':'25393','belton':'13917',
+  'temple 31st':'28591','north temple':'26144','hewitt':'27544','new road':'17489',
+  'valley mills':'2395','lakeshore':'3714',
+  // Group B
+  'canton':'28793','athens':'25385','palestine':'26089','jacksonville':'25290',
+  'crockett':'26908','waskom':'14429','eastman':'5316','marshall':'13191',
+  'loop 281':'5826','mccann':'3630'
+};
+window.storeNumberOf = function(name){
+  const base = String(name||'').replace(/\s*\(.*\)\s*$/,'').trim().toLowerCase();
+  return window.STORE_NUMBERS[base] || '';
+};
+window.storeLabel = function(name){
+  const n = window.storeNumberOf(name);
+  return n ? `${name} #${n}` : String(name||'');
+};
+
 // The 24 stores on the route plan are THE inspection stores. Everything
 // store-facing in the app filters to this list.
 window.R_routeStoreNames = function(){
@@ -4959,7 +4982,7 @@ function R_buildPrintHTML(){
       // time spent at this stop
       if(t.dur>0.4){
         let what=st.name;
-        if(st.kind==='store') what=st.name+' Store Visit';
+        if(st.kind==='store') what=window.storeLabel(st.name)+' Store Visit';
         else if(st.kind==='lunch') what='Lunch Break';
         rows+=`<tr class="pt-visit"><td>${R_fmt(t.arrive)}</td><td>${R_fmt(t.depart)}</td><td>${R_fmtDurHM(t.dur)}</td><td class="pt-loc">${R_escapeHtml(what)}</td></tr>`;
       }
@@ -5074,7 +5097,7 @@ function R_drawMap(){
         ? `<br><button class="popup-inspect" data-routeaction="store-modal" data-store="${R_escapeAttr(s.name)}" data-group="${gk}" style="margin-top:6px;background:#EA580C;color:#fff;border:none;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer">Navigate / Inspect</button>`
         : '';
       L.marker([s.lat,s.lng],{icon,zIndexOffset:s.kind==='store'?0:1000})
-        .bindPopup(`<b>${dispNum}. ${R_escapeHtml(s.name)}</b><br>${R_escapeHtml(s.addr)}<br><i>${R_escapeHtml(P.label.replace(/ \(.*\)/,''))} · Day ${day}</i>${popupBtn}`)
+        .bindPopup(`<b>${dispNum}. ${R_escapeHtml(s.kind==='store'?window.storeLabel(s.name):s.name)}</b><br>${R_escapeHtml(s.addr)}<br><i>${R_escapeHtml(P.label.replace(/ \(.*\)/,''))} · Day ${day}</i>${popupBtn}`)
         .addTo(R_layerGroups[gk+'_day'+day]);
     });
   }
@@ -5403,7 +5426,7 @@ window.R_openStoreModal = function(storeName, gk){
   if(!modal) return;
   const P = gk ? RSTATE.parties[gk] : null;
   const stop = P ? P.stops.find(s=>s.name===storeName && s.kind==='store') : null;
-  document.getElementById('rsm-title').textContent = storeName;
+  document.getElementById('rsm-title').textContent = window.storeLabel(storeName);
   document.getElementById('rsm-addr').textContent = stop ? stop.addr : '';
   const timing = R_inspectionTiming(storeName);
   const statusEl=document.getElementById('rsm-status');
