@@ -1087,6 +1087,9 @@
       activeEquipmentIndex: 0,
       showNonVital: false,  // true = the checklist is currently showing ONLY non-vital items
       nonVitalAsked: false,  // the "extra time?" question was answered this inspection
+      equipPage: 0,          // equipment checklist pagination (thirds of the list)
+      nonVitalPage: 0,       // pagination within the non-vital list
+      facilityPage: 0,       // facility checklist pagination (halves)
       
       // Settings management state
       settingsTab: 'stores',
@@ -1263,7 +1266,23 @@
       const kind = miss.facility.length ? 'facility' : 'equipment';
       const names = kind === 'facility' ? miss.facility : miss.equipment;
       names.forEach(n => { window.__expandedCards[kind + '::' + n] = true; });
-      if (kind === 'equipment') window.state.showNonVital = false; // vitals must be visible
+      if (kind === 'facility') {
+        const idx = window.state.facilityCategories.findIndex(c => c.name === names[0]);
+        if (idx >= 0) {
+          const pageSize = Math.max(1, Math.ceil(window.state.facilityCategories.length / 2));
+          window.state.facilityPage = Math.floor(idx / pageSize);
+        }
+      }
+      if (kind === 'equipment') {
+        window.state.showNonVital = false; // vitals must be visible
+        // Jump the pager to the page holding the first missing item.
+        const vital = window.state.equipmentList.filter(e => !e.noncritical);
+        const idx = vital.findIndex(e => e.name === names[0]);
+        if (idx >= 0) {
+          const pageSize = Math.max(1, Math.ceil(vital.length / 3));
+          window.state.equipPage = Math.floor(idx / pageSize);
+        }
+      }
       if (window.state.currentView !== kind) navigate(kind);
       else rerenderChecklistSoft();
       // highlight + scroll after the re-render settles
@@ -2350,7 +2369,18 @@
         return;
       }
 
-      window.state.facilityCategories.forEach((catObj, catIdx) => {
+      // Halved for memory: only one half of the facility cards (and their photo
+      // thumbnails) exists in the DOM at a time.
+      const FAC_PAGES = 2;
+      const allCats = window.state.facilityCategories;
+      const facPageSize = Math.max(1, Math.ceil(allCats.length / FAC_PAGES));
+      const facTotalPages = Math.max(1, Math.ceil(allCats.length / facPageSize));
+      let facPage = Math.min(Math.max(window.state.facilityPage || 0, 0), facTotalPages - 1);
+      window.state.facilityPage = facPage;
+      const facStart = facPage * facPageSize;
+
+      allCats.slice(facStart, facStart + facPageSize).forEach((catObj, sliceIdx) => {
+        const catIdx = facStart + sliceIdx;
         const cat = catObj.name;
         const displayNum = catIdx + 1;
         if (!window.state.facilityAnswers[cat]) {
@@ -2446,6 +2476,19 @@
         container.appendChild(card);
       });
 
+      if (facTotalPages > 1 && allCats.length) {
+        const first = facStart + 1;
+        const last = Math.min(facStart + facPageSize, allCats.length);
+        const pager = document.createElement('div');
+        pager.className = "flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-2xl px-3 py-2.5 shadow-xs";
+        pager.innerHTML = `
+          <button data-action="equip-page" data-target="facilityPage" data-dir="prev" class="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${facPage === 0 ? 'text-neutral-300 pointer-events-none' : 'text-[#1E3A8A] bg-neutral-50 hover:bg-neutral-100 active:scale-95'}"><i data-lucide="chevron-left" class="w-4 h-4"></i> Back</button>
+          <span class="text-[11px] font-bold text-neutral-500 text-center">Page ${facPage + 1} of ${facTotalPages}<br><span class="font-mono text-neutral-400">items ${first}&ndash;${last}</span></span>
+          <button data-action="equip-page" data-target="facilityPage" data-dir="next" class="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${facPage >= facTotalPages - 1 ? 'text-neutral-300 pointer-events-none' : 'text-white bg-[#EA580C] hover:bg-[#C2410C] active:scale-95'}">Next <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+        `;
+        container.appendChild(pager);
+      }
+
       if (window.lucide) lucide.createIcons();
     }
 
@@ -2468,21 +2511,46 @@
       // Numbering: vital items count 1..V in saved order; non-vital items
       // continue the count (V+1..total) so "63 items, 13 non-vital" reads as
       // 1-50 in the main list and 51-63 in the extra-time list.
+      //
+      // PAGINATION: only ~a third of the list is in the DOM at a time — with
+      // 60+ items each holding photo thumbnails, rendering everything at once
+      // can exhaust memory on mobile Chrome. Answers for off-page items are
+      // untouched; paging is purely which cards exist on screen.
+      const vitalItems = [], nonItems = [];
       const vitalTotal = window.state.equipmentList.filter(e => !e.noncritical).length;
       let vitalN = 0, nonN = 0;
       window.state.equipmentList.forEach((eqObj) => {
         const eq = eqObj.name;
-        const isNon = !!eqObj.noncritical;
         if (!window.state.equipmentAnswers[eq]) {
           window.state.equipmentAnswers[eq] = { quantity: 1, rating: '', comment: '', photos: [] };
         }
-        let displayNum;
-        if (isNon) { nonN++; displayNum = vitalTotal + nonN; }
-        else { vitalN++; displayNum = vitalN; }
-        const card = buildEquipmentCard(eqObj, displayNum);
-        if (isNon) nonList.appendChild(card);
-        else vitalList.appendChild(card);
+        if (eqObj.noncritical) { nonN++; nonItems.push({ eqObj, num: vitalTotal + nonN }); }
+        else { vitalN++; vitalItems.push({ eqObj, num: vitalN }); }
       });
+
+      const EQUIP_PAGES = 3;
+      const renderPagedList = (host, items, pageKey) => {
+        const pageSize = Math.max(1, Math.ceil(items.length / EQUIP_PAGES));
+        const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+        let page = Math.min(Math.max(window.state[pageKey] || 0, 0), totalPages - 1);
+        window.state[pageKey] = page;
+        const start = page * pageSize;
+        const slice = items.slice(start, start + pageSize);
+        slice.forEach(x => host.appendChild(buildEquipmentCard(x.eqObj, x.num)));
+        if (totalPages > 1 && slice.length) {
+          const first = slice[0].num, last = slice[slice.length - 1].num;
+          const pager = document.createElement('div');
+          pager.className = "flex items-center justify-between gap-2 bg-white border border-neutral-200 rounded-2xl px-3 py-2.5 shadow-xs";
+          pager.innerHTML = `
+            <button data-action="equip-page" data-target="${pageKey}" data-dir="prev" class="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${page === 0 ? 'text-neutral-300 pointer-events-none' : 'text-[#1E3A8A] bg-neutral-50 hover:bg-neutral-100 active:scale-95'}"><i data-lucide="chevron-left" class="w-4 h-4"></i> Back</button>
+            <span class="text-[11px] font-bold text-neutral-500 text-center">Page ${page + 1} of ${totalPages}<br><span class="font-mono text-neutral-400">items ${first}&ndash;${last}</span></span>
+            <button data-action="equip-page" data-target="${pageKey}" data-dir="next" class="flex items-center gap-1 text-xs font-bold px-3 py-2 rounded-xl transition cursor-pointer ${page >= totalPages - 1 ? 'text-neutral-300 pointer-events-none' : 'text-white bg-[#EA580C] hover:bg-[#C2410C] active:scale-95'}">Next <i data-lucide="chevron-right" class="w-4 h-4"></i></button>
+          `;
+          host.appendChild(pager);
+        }
+      };
+      renderPagedList(vitalList, vitalItems, 'equipPage');
+      renderPagedList(nonList, nonItems, 'nonVitalPage');
 
       const nc = document.getElementById('noncritical-count');
       if (nc) nc.textContent = String(nonN);
@@ -3278,6 +3346,9 @@
 
           window.state.showNonVital = false;  // fresh inspection: vitals first
           window.state.nonVitalAsked = false; // and the extra-time question resets
+          window.state.equipPage = 0;
+          window.state.nonVitalPage = 0;
+          window.state.facilityPage = 0;
           if (modeVal === 'facility' || modeVal === 'both') {
             navigate('facility');
           } else {
@@ -3313,10 +3384,20 @@
         );
       }
 
+      if (action === 'equip-page') {
+        const key = target.getAttribute('data-target');
+        const dir = target.getAttribute('data-dir');
+        window.state[key] = (window.state[key] || 0) + (dir === 'next' ? 1 : -1);
+        if (key === 'facilityPage') renderFacilityChecklist();
+        else renderEquipmentChecklist();
+        scrollAppTop();
+      }
+
       if (action === 'set-nonvital-visible') {
         const yes = (target.getAttribute('data-val') === 'yes');
         window.state.nonVitalAsked = true;
         window.state.showNonVital = yes;
+        if (yes) window.state.nonVitalPage = 0;
         renderEquipmentChecklist();
         if (yes) scrollAppTop();
       }
