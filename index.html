@@ -369,7 +369,7 @@
           <span id="sidebar-status-dot" class="w-1.5 h-1.5 bg-green-400 rounded-full animate-pulse shadow-md"></span>
           <span id="sidebar-status-text">Live Connection Active</span>
         </div>
-        <div class="text-[9px] font-mono text-orange-200/40 mt-1.5">v2.6.1</div>
+        <div class="text-[9px] font-mono text-orange-200/40 mt-1.5">v2.6.2</div>
       </div>
     </aside>
 
@@ -705,12 +705,24 @@
             <span class="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-widest flex items-center gap-1 leading-none select-none">
               <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-[#EA580C]"></i> Bulk Ordering Tools
             </span>
-            <div class="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+            <div class="flex flex-wrap items-center gap-1.5 w-full sm:w-auto" id="order-tools-normal">
+              <button data-action="start-order-edit" class="flex-1 sm:flex-initial bg-[#1E3A8A] text-white hover:bg-[#1E40AF] font-bold text-[11px] px-3.5 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <i data-lucide="pencil" class="w-3.5 h-3.5"></i> Edit order
+              </button>
               <button data-action="toggle-batch-editor" class="flex-1 sm:flex-initial bg-[#EA580C]/10 text-[#EA580C] hover:bg-[#EA580C]/15 border border-[#EA580C]/20 font-bold text-[11px] px-3.5 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
                 <i data-lucide="arrow-up-down" class="w-3.5 h-3.5"></i> ⚡ Quick Batch Reorder
               </button>
               <button data-action="undo-bulk-reorder" class="flex-1 sm:flex-initial bg-neutral-100 border border-neutral-250 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-900 font-bold text-[11px] px-3.5 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
                 <i data-lucide="undo-2" class="w-3.5 h-3.5"></i> Undo last reorder
+              </button>
+            </div>
+            <div class="hidden flex-wrap items-center gap-1.5 w-full sm:w-auto" id="order-tools-editing">
+              <span class="text-[10px] font-bold text-neutral-500 flex-1 sm:flex-initial">Type new position numbers, then save. Nothing is written until you do.</span>
+              <button data-action="save-order-edit" class="flex-1 sm:flex-initial bg-green-600 text-white hover:bg-green-700 font-bold text-[11px] px-4 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                <i data-lucide="check" class="w-3.5 h-3.5"></i> Save order
+              </button>
+              <button data-action="cancel-order-edit" class="flex-1 sm:flex-initial bg-neutral-100 border border-neutral-250 text-neutral-700 hover:bg-neutral-200 font-bold text-[11px] px-4 py-2 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer">
+                Cancel
               </button>
             </div>
           </div>
@@ -801,7 +813,7 @@
 
 </div>
 
-        <div class="pt-8 pb-2 text-center text-[10px] font-mono text-neutral-400 select-none">DPM Acquisition Tracker &middot; v2.6.1</div>
+        <div class="pt-8 pb-2 text-center text-[10px] font-mono text-neutral-400 select-none">DPM Acquisition Tracker &middot; v2.6.2</div>
       </main>
 
       <!-- Global Overlay Loader with blur -->
@@ -903,6 +915,22 @@
     </div>
     <div id="missing-items-list" class="max-h-52 overflow-y-auto space-y-1.5 text-left"></div>
     <button onclick="window.__reviewMissing && window.__reviewMissing()" class="w-full bg-[#EA580C] hover:bg-[#C2410C] text-white font-bold text-sm py-3 rounded-2xl transition active:scale-95 cursor-pointer">Take me to them</button>
+  </div>
+</div>
+
+<!-- Settings password gate -->
+<div id="settings-gate" class="hidden fixed inset-0 z-[10045] bg-black/60 items-center justify-center p-6" style="backdrop-filter:blur(3px)">
+  <div class="bg-white rounded-3xl shadow-2xl max-w-sm w-full p-6 space-y-4 text-center">
+    <span class="p-2.5 bg-[#1E3A8A] text-white rounded-2xl inline-flex"><i data-lucide="lock" class="w-6 h-6"></i></span>
+    <h2 class="text-lg font-extrabold text-[#1E3A8A]">Settings are locked</h2>
+    <p class="text-xs text-neutral-500">Enter the settings password to continue.</p>
+    <input type="password" id="settings-gate-input" placeholder="Password" autocomplete="off"
+      class="w-full text-sm font-semibold text-neutral-800 bg-neutral-50 border border-neutral-200 rounded-2xl px-4 py-3.5 text-center">
+    <p id="settings-gate-error" class="hidden text-[11px] font-bold text-red-600">Wrong password — try again.</p>
+    <div class="grid grid-cols-2 gap-2.5">
+      <button onclick="window.__settingsGateCancel && window.__settingsGateCancel()" class="py-3 rounded-2xl text-sm font-bold bg-neutral-100 text-neutral-600 hover:bg-neutral-200 transition cursor-pointer">Cancel</button>
+      <button onclick="window.__settingsGateTry && window.__settingsGateTry()" class="py-3 rounded-2xl text-sm font-bold bg-[#EA580C] text-white hover:bg-[#C2410C] transition cursor-pointer">Unlock</button>
+    </div>
   </div>
 </div>
 
@@ -1033,6 +1061,12 @@
     // the Settings list (that's what made items "come again" mid-edit).
     let orderWriteInFlight = false;
 
+    // EDIT-ORDER MODE: reordering happens entirely on-device in a draft list —
+    // zero Firestore writes while editing. Pressing "Save order" commits the
+    // whole sequence in ONE atomic batch. Applies to facilities AND equipment.
+    window.__orderDraft = null;      // draft item array while editing
+    window.__orderDraftColl = null;  // which collection the draft belongs to
+
     // Which checklist cards have their Notes & Photos section open on mobile.
     // Lives outside window.state so it never syncs/serializes anywhere.
     window.__expandedCards = {};
@@ -1061,6 +1095,7 @@
 
       // Stores ordering filter settings
       storeSortMode: 'cluster', // 'cluster' or 'alphabetical'
+      orderEditMode: false, // Settings: reorder-numbers editing session active
       
       // Dashboard filter caches
       filterStore: '',
@@ -1321,7 +1356,7 @@
         });
         window.state.facilityCategories = sortOrderedList(raw);
         renderOverviewItemFilters();
-        if (window.state.currentView === 'settings' && !window.state.editingStoreId && !orderWriteInFlight) renderSettingsItems();
+        if (window.state.currentView === 'settings' && !window.state.editingStoreId && !orderWriteInFlight && !window.state.orderEditMode) renderSettingsItems();
         if (window.state.currentView === 'facility') rerenderChecklistSoft();
       }, (err) => { console.error("Facility categories sync error:", err); });
 
@@ -1332,7 +1367,7 @@
         });
         window.state.equipmentList = sortOrderedList(raw);
         renderOverviewItemFilters();
-        if (window.state.currentView === 'settings' && !window.state.editingStoreId && !orderWriteInFlight) renderSettingsItems();
+        if (window.state.currentView === 'settings' && !window.state.editingStoreId && !orderWriteInFlight && !window.state.orderEditMode) renderSettingsItems();
         if (window.state.currentView === 'equipment') rerenderChecklistSoft();
       }, (err) => { console.error("Equipment list sync error:", err); });
     }
@@ -2094,6 +2129,20 @@
 
       let list = [];
       let targetCollection = '';
+
+      // Edit-order sessions belong to one list; switching tabs discards a draft.
+      const tabColl = (window.state.settingsTab === 'stores') ? 'stores'
+        : (window.state.settingsTab === 'facilities') ? 'facilityCategories' : 'equipmentList';
+      if (window.state.orderEditMode && (window.__orderDraftColl !== tabColl || tabColl === 'stores')) {
+        window.state.orderEditMode = false;
+        window.__orderDraft = null;
+        window.__orderDraftColl = null;
+      }
+      const editing = window.state.orderEditMode;
+      const toolsNormal = document.getElementById('order-tools-normal');
+      const toolsEditing = document.getElementById('order-tools-editing');
+      if (toolsNormal) toolsNormal.classList.toggle('hidden', editing);
+      if (toolsEditing) { toolsEditing.classList.toggle('hidden', !editing); toolsEditing.classList.toggle('flex', editing); }
       const inputAddLabel = document.getElementById('settings-add-title');
       const settingsInput = document.getElementById('settings-add-input');
       const settingsHint = document.getElementById('settings-add-hint');
@@ -2143,7 +2192,7 @@
       } else if (window.state.settingsTab === 'facilities') {
         list = window.state.facilityCategories;
         targetCollection = 'facilityCategories';
-        container.className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5";
+        container.className = "space-y-2 max-w-2xl";
         if (inputAddLabel) inputAddLabel.innerText = "Add New Category";
         if (settingsInput) settingsInput.placeholder = "Type name here...";
         if (settingsCluster) settingsCluster.classList.add('hidden');
@@ -2157,6 +2206,8 @@
         if (settingsCluster) settingsCluster.classList.add('hidden');
         if (settingsHint) settingsHint.classList.add('hidden');
       }
+
+      if (editing && window.__orderDraft) list = window.__orderDraft;
 
       const activeTabBtn = document.getElementById(`tab-${window.state.settingsTab}`);
       ['tab-stores', 'tab-facilities', 'tab-equipment'].forEach(btnId => {
@@ -2242,41 +2293,34 @@
           } else {
             const isEquip = (targetCollection === 'equipmentList');
             const isNon = isEquip && !!item.noncritical;
-            if (isEquip) {
-              // Equipment: editable position number — type 16 and the item jumps
-              // to slot 16, pushing everything below it down one.
+            const nonPill = isNon ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-neutral-200 text-neutral-500 shrink-0">Non-vital</span>' : '';
+            if (editing) {
+              // EDIT-ORDER MODE: numbers are editable, everything happens in the
+              // on-device draft. NOTHING is written until "Save order".
+              row.innerHTML = `
+                <div class="flex items-center gap-2.5 flex-1 min-w-0">
+                  <input type="number" inputmode="numeric" min="1" max="${list.length}" value="${itemIdx + 1}"
+                    data-action="set-item-position" data-collection="${targetCollection}" data-id="${item.id}"
+                    class="w-14 shrink-0 text-center bg-white border-2 border-[#1E3A8A]/30 rounded-lg px-1 py-1.5 text-xs font-extrabold font-mono"
+                    title="Type a position number — saved only when you press Save order">
+                  <span class="text-xs font-bold text-neutral-850 break-words min-w-0">${escapeHtml(item.name)}</span>
+                  ${nonPill}
+                </div>
+              `;
+            } else {
               row.innerHTML = `
                 <div class="flex items-center gap-2.5 flex-1 mr-3 min-w-0">
-                  <input type="number" inputmode="numeric" min="1" max="${list.length}" value="${itemIdx + 1}"
-                    data-action="set-item-position" data-collection="equipmentList" data-id="${item.id}"
-                    class="w-14 shrink-0 text-center bg-white border border-neutral-200 rounded-lg px-1 py-1.5 text-xs font-extrabold font-mono"
-                    title="Type a position number to move this item">
+                  <span class="w-8 text-right shrink-0 font-mono text-xs font-extrabold text-neutral-400 select-none">${itemIdx + 1}.</span>
                   <span class="text-xs font-bold text-neutral-850 break-words min-w-0">${escapeHtml(item.name)}</span>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
+                  ${isEquip ? `
                   <span class="flex items-center gap-1.5" title="${isNon ? 'Non-vital — tap to make vital' : 'Vital — tap to make non-vital'}">
                     <span class="text-[8px] font-extrabold uppercase tracking-wider ${isNon ? 'text-red-500' : 'text-green-600'}">${isNon ? 'Non-vital' : 'Vital'}</span>
                     <button data-action="toggle-equipment-critical" data-item="${escapeHtml(item.name)}" role="switch" aria-checked="${!isNon}" class="eq-switch ${isNon ? 'eq-off' : ''}"><span class="eq-knob pointer-events-none"></span></button>
                   </span>
                   <div class="w-px h-4 bg-neutral-200 mx-1"></div>
-                  <button data-action="delete-settings-item" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-red-700 transition p-1 cursor-pointer" title="Delete">
-                    <i data-lucide="x" class="w-4 h-4"></i>
-                  </button>
-                </div>
-              `;
-            } else {
-              row.innerHTML = `
-                <div class="flex items-center gap-2 flex-1 mr-4 min-w-0">
-                  <span class="text-xs font-bold text-neutral-850 truncate">${escapeHtml(item.name)}</span>
-                </div>
-                <div class="flex items-center gap-1 shrink-0">
-                  <button data-action="reorder-item-up" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Up">
-                    <i data-lucide="chevron-up" class="w-4 h-4"></i>
-                  </button>
-                  <button data-action="reorder-item-down" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Down">
-                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
-                  </button>
-                  <div class="w-px h-4 bg-neutral-200 mx-1.5"></div>
+                  ` : ''}
                   <button data-action="delete-settings-item" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-red-700 transition p-1 cursor-pointer" title="Delete">
                     <i data-lucide="x" class="w-4 h-4"></i>
                   </button>
@@ -2647,7 +2691,14 @@
         return;
       }
 
-      const sorted = sortStores(visibleStores());
+      // Sorted in store-visit order: Group A's route sequence, then Group B's.
+      const routeOrder = (window.R_routeStoreNames ? window.R_routeStoreNames() : [])
+        .map(n => String(n).trim().toLowerCase());
+      const orderOf = (name) => {
+        const i = routeOrder.indexOf(String(name || '').trim().toLowerCase());
+        return i === -1 ? 9999 : i;
+      };
+      const sorted = [...visibleStores()].sort((a, b) => orderOf(a.name) - orderOf(b.name));
       sorted.forEach(S => {
         const status = getStoreStatus(S.name);
         const isSelected = (window.state.filterStore === S.name);
@@ -2832,6 +2883,48 @@
       return card;
     }
 
+    // =========================================================================
+    // SETTINGS PASSWORD GATE — unlocked once per browser session.
+    // (Client-side check: keeps honest people out, not a security boundary.)
+    // =========================================================================
+    const SETTINGS_PASS = "ampler2dpm";
+    function settingsUnlocked() {
+      try { return sessionStorage.getItem('dpm.settingsUnlocked') === '1'; } catch (e) { return false; }
+    }
+    function openSettingsGate() {
+      const g = document.getElementById('settings-gate');
+      const inp = document.getElementById('settings-gate-input');
+      const err = document.getElementById('settings-gate-error');
+      if (err) err.classList.add('hidden');
+      if (inp) inp.value = '';
+      if (g) { g.classList.remove('hidden'); g.classList.add('flex'); }
+      if (window.lucide) lucide.createIcons();
+      setTimeout(() => { if (inp) inp.focus(); }, 60);
+    }
+    window.__settingsGateCancel = function () {
+      const g = document.getElementById('settings-gate');
+      if (g) { g.classList.add('hidden'); g.classList.remove('flex'); }
+    };
+    window.__settingsGateTry = function () {
+      const inp = document.getElementById('settings-gate-input');
+      const err = document.getElementById('settings-gate-error');
+      if (inp && inp.value === SETTINGS_PASS) {
+        try { sessionStorage.setItem('dpm.settingsUnlocked', '1'); } catch (e) {}
+        window.__settingsGateCancel();
+        navigate('settings');
+      } else {
+        if (err) err.classList.remove('hidden');
+        if (inp) { inp.value = ''; inp.focus(); }
+      }
+    };
+    document.addEventListener('keydown', (e) => {
+      const g = document.getElementById('settings-gate');
+      if (g && !g.classList.contains('hidden')) {
+        if (e.key === 'Enter') window.__settingsGateTry();
+        if (e.key === 'Escape') window.__settingsGateCancel();
+      }
+    });
+
     // The page scrolls inside #main-content, not the window — reset that.
     function scrollAppTop() {
       const mc = document.getElementById('main-content');
@@ -2842,6 +2935,10 @@
     function navigate(viewName) {
       // Checklists need an active inspection to save into. Reached directly
       // (tab bar / direct) without one, bounce to store selection instead.
+      if (viewName === 'settings' && !settingsUnlocked()) {
+        openSettingsGate();
+        return; // stay where we are until the password is entered
+      }
       if ((viewName === 'facility' || viewName === 'equipment') && !window.state.activeDocId) {
         sendNotification("Pick a store and inspector first — then the checklist opens.", "info");
         viewName = 'store-select';
@@ -3445,39 +3542,6 @@
         }
       }
 
-      if (action === 'reorder-item-up' || action === 'reorder-item-down') {
-        const coll = target.getAttribute('data-collection');
-        const id = target.getAttribute('data-id');
-        let list = (coll === 'facilityCategories') ? [...window.state.facilityCategories] : [...window.state.equipmentList];
-        const idx = list.findIndex(x => x.id === id);
-        
-        if (idx === -1) return;
-        if (action === 'reorder-item-up' && idx === 0) return;
-        if (action === 'reorder-item-down' && idx === list.length - 1) return;
-
-        const neighborShift = (action === 'reorder-item-up') ? -1 : 1;
-        const temp = list[idx];
-        list[idx] = list[idx + neighborShift];
-        list[idx + neighborShift] = temp;
-
-        presentOverlay("Arranging list", "Adjusting cloud priority sequence...");
-        orderWriteInFlight = true;
-        try {
-          const batch = writeBatch(db);
-          list.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
-          await batch.commit();
-          dismissOverlay();
-          sendNotification("Assigned order sequence updated!", "success");
-        } catch (err) {
-          console.error("Order persist failed", err);
-          dismissOverlay();
-          sendNotification("Failed storing order.", "error");
-        } finally {
-          orderWriteInFlight = false;
-          if (window.state.currentView === 'settings') renderSettingsItems();
-        }
-      }
-
       if (action === 'submit-settings-add') {
         const input = document.getElementById('settings-add-input');
         const rawVal = input ? input.value.trim() : '';
@@ -3578,6 +3642,62 @@
           } else {
             editor.classList.add('hidden');
           }
+        }
+      }
+
+      if (action === 'start-order-edit') {
+        if (window.state.settingsTab === 'stores') return;
+        const coll = (window.state.settingsTab === 'facilities') ? 'facilityCategories' : 'equipmentList';
+        const src = (coll === 'facilityCategories') ? window.state.facilityCategories : window.state.equipmentList;
+        window.__orderDraft = [...src];   // on-device draft — no writes yet
+        window.__orderDraftColl = coll;
+        window.state.orderEditMode = true;
+        renderSettingsItems();
+        sendNotification("Edit the position numbers, then press Save order.", "info");
+      }
+
+      if (action === 'cancel-order-edit') {
+        window.state.orderEditMode = false;
+        window.__orderDraft = null;
+        window.__orderDraftColl = null;
+        renderSettingsItems();
+      }
+
+      if (action === 'save-order-edit') {
+        const coll = window.__orderDraftColl;
+        const draft = window.__orderDraft;
+        if (!coll || !draft) { window.state.orderEditMode = false; renderSettingsItems(); return; }
+        // Backup the pre-edit cloud order for Undo
+        const before = (coll === 'facilityCategories') ? window.state.facilityCategories : window.state.equipmentList;
+        try {
+          localStorage.setItem('dpm.orderBackup.' + coll, JSON.stringify({
+            at: Date.now(),
+            items: before.map((x, i) => ({ id: x.id, name: x.name, order: (x.order != null ? x.order : i), noncritical: !!x.noncritical }))
+          }));
+        } catch (e) {}
+
+        presentOverlay("Saving order", "Writing the full sequence in one atomic commit...");
+        orderWriteInFlight = true;
+        try {
+          const batch = writeBatch(db);
+          draft.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
+          await batch.commit();
+          // optimistic local apply so the list is instantly correct
+          draft.forEach((x, i) => { x.order = i; });
+          if (coll === 'facilityCategories') window.state.facilityCategories = draft;
+          else window.state.equipmentList = draft;
+          dismissOverlay();
+          sendNotification("Order saved — one write, fully synced.", "success");
+        } catch (err) {
+          console.error("Save order failed", err);
+          dismissOverlay();
+          sendNotification("Couldn't save the order — nothing was changed. Check connection and try again.", "error");
+        } finally {
+          orderWriteInFlight = false;
+          window.state.orderEditMode = false;
+          window.__orderDraft = null;
+          window.__orderDraftColl = null;
+          renderSettingsItems();
         }
       }
 
@@ -3793,48 +3913,22 @@
 
       // Editable position numbers in Settings -> Equipment. Typing 16 moves the
       // item into slot 16 and pushes the old #16 down to #17.
+      // Position numbers exist only inside Edit-order mode. Reordering here is
+      // purely local (the draft) — Firestore is untouched until "Save order".
       if (target && target.getAttribute('data-action') === 'set-item-position') {
-        if (orderWriteInFlight) { renderSettingsItems(); return; } // one move at a time
-        const coll = target.getAttribute('data-collection');
+        const draft = window.__orderDraft;
+        if (!window.state.orderEditMode || !draft) { renderSettingsItems(); return; }
         const id = target.getAttribute('data-id');
-        const list = [...window.state.equipmentList];
-        const fromIdx = list.findIndex(x => x.id === id);
+        const fromIdx = draft.findIndex(x => x.id === id);
         if (fromIdx === -1) return;
         let toIdx = parseInt(target.value, 10);
         if (isNaN(toIdx)) { renderSettingsItems(); return; }
-        toIdx = Math.min(Math.max(toIdx, 1), list.length) - 1;
-        if (toIdx === fromIdx) { renderSettingsItems(); return; }
-
-        // Safety net for Undo last reorder
-        try {
-          localStorage.setItem('dpm.orderBackup.' + coll, JSON.stringify({
-            at: Date.now(),
-            items: list.map((x, i) => ({ id: x.id, name: x.name, order: (x.order != null ? x.order : i), noncritical: !!x.noncritical }))
-          }));
-        } catch (err) {}
-
-        const [moved] = list.splice(fromIdx, 1);
-        list.splice(toIdx, 0, moved);
-        list.forEach((x, i) => { x.order = i; });
-        window.state.equipmentList = list;   // optimistic
+        toIdx = Math.min(Math.max(toIdx, 1), draft.length) - 1;
         try { target.blur(); } catch (err) {}
+        if (toIdx === fromIdx) { renderSettingsItems(); return; }
+        const [moved] = draft.splice(fromIdx, 1);
+        draft.splice(toIdx, 0, moved);
         renderSettingsItems();
-
-        // ONE atomic batch commit — a single snapshot echo, never the
-        // half-written intermediate orders that made items reshuffle.
-        orderWriteInFlight = true;
-        try {
-          const batch = writeBatch(db);
-          list.forEach((item, index) => batch.set(doc(db, coll, item.id), { order: index }, { merge: true }));
-          await batch.commit();
-          sendNotification(`"${moved.name}" moved to #${toIdx + 1}.`, "success");
-        } catch (err) {
-          console.error("Position save failed", err);
-          sendNotification("Couldn't save the new order — check connection.", "error");
-        } finally {
-          orderWriteInFlight = false;
-          if (window.state.currentView === 'settings') renderSettingsItems();
-        }
         return;
       }
 
