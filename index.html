@@ -2306,8 +2306,9 @@
         return;
       }
 
-      window.state.facilityCategories.forEach((catObj) => {
+      window.state.facilityCategories.forEach((catObj, catIdx) => {
         const cat = catObj.name;
+        const displayNum = catIdx + 1;
         if (!window.state.facilityAnswers[cat]) {
           window.state.facilityAnswers[cat] = { rating: '', comment: '', photos: [] };
         }
@@ -2374,7 +2375,7 @@
               <i data-lucide="image" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
               <input type="file" accept="image/*" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}" multiple>
             </label>
-            <h3 class="flex-1 text-center text-sm font-bold text-slate-800 leading-tight px-1">${cat}</h3>
+            <h3 class="flex-1 text-center text-sm font-bold text-slate-800 leading-tight px-1"><span class="text-neutral-400 font-mono font-extrabold">${displayNum}.</span> ${cat}</h3>
             <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Take a photo">
               <i data-lucide="camera" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
               <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}">
@@ -2420,6 +2421,10 @@
         return;
       }
 
+      // Numbering: vital items count 1..V in saved order; non-vital items
+      // continue the count (V+1..total) so "63 items, 13 non-vital" reads as
+      // 1-50 in the main list and 51-63 in the extra-time list.
+      const vitalTotal = window.state.equipmentList.filter(e => !e.noncritical).length;
       let vitalN = 0, nonN = 0;
       window.state.equipmentList.forEach((eqObj) => {
         const eq = eqObj.name;
@@ -2427,9 +2432,12 @@
         if (!window.state.equipmentAnswers[eq]) {
           window.state.equipmentAnswers[eq] = { quantity: 1, rating: '', comment: '', photos: [] };
         }
-        const card = buildEquipmentCard(eqObj);
-        if (isNon) { nonList.appendChild(card); nonN++; }
-        else { vitalList.appendChild(card); vitalN++; }
+        let displayNum;
+        if (isNon) { nonN++; displayNum = vitalTotal + nonN; }
+        else { vitalN++; displayNum = vitalN; }
+        const card = buildEquipmentCard(eqObj, displayNum);
+        if (isNon) nonList.appendChild(card);
+        else vitalList.appendChild(card);
       });
 
       const nc = document.getElementById('noncritical-count');
@@ -2460,7 +2468,7 @@
     }
 
     // Builds one equipment inspection card (used by both columns).
-    function buildEquipmentCard(eqObj) {
+    function buildEquipmentCard(eqObj, displayNum) {
       const eq = eqObj.name;
       const isNon = !!eqObj.noncritical;
       const ans = window.state.equipmentAnswers[eq];
@@ -2525,7 +2533,7 @@
             <i data-lucide="image" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
             <input type="file" accept="image/*" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}" multiple>
           </label>
-          <h3 class="flex-1 text-center text-sm font-bold text-slate-800 leading-tight px-1 break-words">${eq}${isNon ? ' <span class="text-[9px] font-bold text-neutral-400 uppercase align-middle">&middot; non-vital</span>' : ''}</h3>
+          <h3 class="flex-1 text-center text-sm font-bold text-slate-800 leading-tight px-1 break-words"><span class="text-neutral-400 font-mono font-extrabold">${displayNum ? displayNum + '.' : ''}</span> ${eq}${isNon ? ' <span class="text-[9px] font-bold text-neutral-400 uppercase align-middle">&middot; non-vital</span>' : ''}</h3>
           <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Take a photo">
             <i data-lucide="camera" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
             <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}">
@@ -2824,6 +2832,13 @@
       return card;
     }
 
+    // The page scrolls inside #main-content, not the window — reset that.
+    function scrollAppTop() {
+      const mc = document.getElementById('main-content');
+      if (mc) mc.scrollTop = 0;
+      window.scrollTo(0, 0);
+    }
+
     function navigate(viewName) {
       // Checklists need an active inspection to save into. Reached directly
       // (tab bar / direct) without one, bounce to store selection instead.
@@ -2894,7 +2909,7 @@
       else if (viewName === 'settings') renderSettingsItems();
       else if (viewName === 'route') { if (window.R_openRouteView) window.R_openRouteView(); }
 
-      window.scrollTo(0, 0);
+      scrollAppTop();
     }
     window.navigate = navigate;
 
@@ -3206,13 +3221,13 @@
         window.state.nonVitalAsked = true;
         window.state.showNonVital = yes;
         renderEquipmentChecklist();
-        if (yes) window.scrollTo(0, 0);
+        if (yes) scrollAppTop();
       }
 
       if (action === 'back-to-vital') {
         window.state.showNonVital = false;
         renderEquipmentChecklist();
-        window.scrollTo(0, 0);
+        scrollAppTop();
       }
 
       if (action === 'toggle-card-details') {
@@ -3344,7 +3359,7 @@
               window.state.nonVitalAsked = true;
               window.state.showNonVital = true;
               renderEquipmentChecklist();
-              window.scrollTo(0, 0);
+              scrollAppTop();
             },
             () => { // No — remember the answer and finish normally
               window.state.nonVitalAsked = true;
