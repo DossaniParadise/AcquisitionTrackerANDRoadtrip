@@ -524,20 +524,23 @@
             </button>
           </div>
 
-          <div class="grid grid-cols-2 gap-3 md:gap-5">
-            <div class="space-y-3">
-              <div class="flex items-center gap-2 sticky top-0 z-10 bg-[#FCFAF7]/95 backdrop-blur py-1">
-                <span class="p-1 bg-[#1E3A8A] text-white rounded-lg flex items-center justify-center"><i data-lucide="zap" class="w-3.5 h-3.5"></i></span>
-                <h3 class="text-xs font-extrabold text-[#1E3A8A] uppercase tracking-widest">Vital Equipment</h3>
-                <span id="vital-count" class="text-[10px] font-bold text-neutral-400 font-mono"></span>
+          <div class="space-y-4 max-w-2xl mx-auto w-full">
+            <div id="equipment-vital-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
+
+            <!-- Non-vital items stay hidden until the inspector opts in -->
+            <div id="nonvital-prompt" class="bg-white border border-orange-100/60 p-5 rounded-3xl text-center space-y-3 shadow-sm">
+              <p class="text-sm font-bold text-[#1E3A8A]">Inspect non-vital equipment as well?</p>
+              <p class="text-[11px] text-neutral-500">Items marked non-vital in Settings <span id="noncritical-count" class="font-mono font-bold"></span></p>
+              <div class="grid grid-cols-2 gap-2.5 max-w-xs mx-auto">
+                <button data-action="set-nonvital-visible" data-val="yes" id="nonvital-yes" class="py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100">Yes</button>
+                <button data-action="set-nonvital-visible" data-val="no" id="nonvital-no" class="py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100">No</button>
               </div>
-              <div id="equipment-vital-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
             </div>
-            <div class="space-y-3">
-              <div class="flex items-center gap-2 sticky top-0 z-10 bg-[#FCFAF7]/95 backdrop-blur py-1">
+
+            <div id="equipment-noncritical-wrap" class="hidden space-y-3">
+              <div class="flex items-center gap-2 py-1">
                 <span class="p-1 bg-neutral-400 text-white rounded-lg flex items-center justify-center"><i data-lucide="clock" class="w-3.5 h-3.5"></i></span>
-                <h3 class="text-xs font-extrabold text-neutral-500 uppercase tracking-widest">Less Vital &middot; If Time Allows</h3>
-                <span id="noncritical-count" class="text-[10px] font-bold text-neutral-400 font-mono"></span>
+                <h3 class="text-xs font-extrabold text-neutral-500 uppercase tracking-widest">Non-Vital Equipment</h3>
               </div>
               <div id="equipment-noncritical-list" class="grid grid-cols-1 gap-3 md:gap-5"></div>
             </div>
@@ -1006,6 +1009,7 @@
       facilityAnswers: {},
       equipmentAnswers: {},
       activeEquipmentIndex: 0,
+      showNonVital: false, // "Inspect non-vital equipment as well?" answer
       
       // Settings management state
       settingsTab: 'stores',
@@ -2112,13 +2116,14 @@
             row.innerHTML = `
               <div class="flex items-center gap-2 flex-1 mr-4 min-w-0">
                 <span class="text-xs font-bold text-neutral-850 truncate">${escapeHtml(item.name)}</span>
-                ${isNon ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-neutral-200 text-neutral-500 shrink-0">Less vital</span>' : ''}
+                ${isNon ? '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-neutral-200 text-neutral-500 shrink-0">Non-vital</span>' : ''}
               </div>
               <div class="flex items-center gap-1 shrink-0">
                 ${isEquip ? `
-                <button data-action="toggle-equipment-critical" data-item="${escapeHtml(item.name)}" class="text-[9px] font-extrabold uppercase tracking-wider px-2 py-1 rounded-lg border transition cursor-pointer ${isNon ? 'bg-[#1E3A8A]/10 border-[#1E3A8A]/20 text-[#1E3A8A] hover:bg-[#1E3A8A]/15' : 'bg-neutral-100 border-neutral-200 text-neutral-500 hover:bg-neutral-200'}" title="${isNon ? 'Mark as vital' : 'Mark as less vital'}">
-                  ${isNon ? 'Make vital' : 'Less vital'}
-                </button>
+                <span class="flex items-center gap-1.5" title="${isNon ? 'Non-vital — tap to make vital' : 'Vital — tap to make non-vital'}">
+                  <span class="text-[8px] font-extrabold uppercase tracking-wider ${isNon ? 'text-red-500' : 'text-green-600'}">${isNon ? 'Non-vital' : 'Vital'}</span>
+                  <button data-action="toggle-equipment-critical" data-item="${escapeHtml(item.name)}" role="switch" aria-checked="${!isNon}" class="eq-switch ${isNon ? 'eq-off' : ''}"><span class="eq-knob pointer-events-none"></span></button>
+                </span>
                 <div class="w-px h-4 bg-neutral-200 mx-1"></div>
                 ` : ''}
                 <button data-action="reorder-item-up" data-collection="${targetCollection}" data-id="${item.id}" class="text-xs text-neutral-400 hover:text-neutral-950 transition p-1 cursor-pointer" title="Move Up">
@@ -2214,21 +2219,19 @@
         const isExpanded = !!(window.__expandedCards && window.__expandedCards[cardKey])
           || (commentRequired && !(ans.comment || '').trim())
           || (ans.photos || []).some(p => p.status === 'failed');
-        const statusChip = ans.rating
-          ? (ans.rating === 'Good'
-              ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD</span>'
-              : ans.rating === 'Acceptable'
-                ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">ACCEPT</span>'
-                : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 shrink-0">BAD</span>')
-          : (nPhotos > 0
-              ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD (PHOTO)</span>'
-              : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200 shrink-0">&mdash;</span>');
         const card = document.createElement('div');
         card.className = "cl-card bg-white p-4 rounded-3xl border border-orange-100/65 shadow-xs space-y-3" + (isExpanded ? " expanded" : "");
         card.innerHTML = `
-          <div class="flex justify-between items-start gap-2">
-            <h3 class="text-sm font-bold text-slate-800 flex-1 leading-tight">${cat}</h3>
-            ${statusChip}
+          <div class="flex items-center gap-2">
+            <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Upload from gallery">
+              <i data-lucide="image" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
+              <input type="file" accept="image/*" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}" multiple>
+            </label>
+            <h3 class="flex-1 text-center text-sm font-bold text-slate-800 leading-tight px-1">${cat}</h3>
+            <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Take a photo">
+              <i data-lucide="camera" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
+              <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}">
+            </label>
           </div>
           <div class="grid grid-cols-3 gap-1.5 select-none text-center">
             <button data-action="set-rating" data-item="${escapeHtml(cat)}" data-val="Good" class="py-2 rounded-xl text-xs font-semibold border transition cursor-pointer ${ans.rating === 'Good' ? 'bg-green-150 border-green-300 text-green-700 font-bold' : 'bg-neutral-50 hover:bg-neutral-100 text-neutral-500 border-transparent'}">Good</button>
@@ -2245,15 +2248,7 @@
               ${commentRequired ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
             </div>
             <textarea data-action="update-comment" data-kind="facility" data-item="${escapeHtml(cat)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
-            <div class="space-y-1.5">
-              <label class="flex items-center justify-center gap-2 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-2.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition">
-                <i data-lucide="camera" class="w-4 h-4 text-neutral-500 shrink-0"></i>
-                <span class="text-[11px] text-neutral-700 font-bold leading-none">Add Photos</span>
-                <span class="text-[10px] text-neutral-400 leading-none">camera or gallery &middot; ${nPhotos}/6</span>
-                <input type="file" accept="image/*" class="hidden" data-action="upload-photo" data-item="${escapeHtml(cat)}" multiple>
-              </label>
-              ${photosHTML}
-            </div>
+            ${photosHTML || '<p class="text-[10px] text-neutral-400 text-center">No photos yet — use the gallery/camera buttons at the top of this card (up to 6).</p>'}
           </div>
         `;
         container.appendChild(card);
@@ -2290,15 +2285,28 @@
         else { vitalList.appendChild(card); vitalN++; }
       });
 
-      const vc = document.getElementById('vital-count');
       const nc = document.getElementById('noncritical-count');
-      if (vc) vc.textContent = vitalN ? `(${vitalN})` : '';
       if (nc) nc.textContent = nonN ? `(${nonN})` : '';
       if (vitalN === 0) {
-        vitalList.innerHTML = `<div class="p-6 text-center text-neutral-300 text-[11px] font-medium border border-dashed border-neutral-200 rounded-2xl">No vital items \u2014 everything is marked less-vital.</div>`;
+        vitalList.innerHTML = `<div class="p-6 text-center text-neutral-300 text-[11px] font-medium border border-dashed border-neutral-200 rounded-2xl">No vital items \u2014 everything is marked non-vital in Settings.</div>`;
       }
+
+      // The non-vital section only exists once the inspector answers "Yes".
+      const promptEl = document.getElementById('nonvital-prompt');
+      const wrapEl = document.getElementById('equipment-noncritical-wrap');
+      const yesBtn = document.getElementById('nonvital-yes');
+      const noBtn = document.getElementById('nonvital-no');
+      const show = !!window.state.showNonVital;
       if (nonN === 0) {
-        nonList.innerHTML = `<div class="p-6 text-center text-neutral-300 text-[11px] font-medium border border-dashed border-neutral-200 rounded-2xl">No less-vital items. Use the flag on a card to move it here.</div>`;
+        if (promptEl) promptEl.classList.add('hidden');
+        if (wrapEl) wrapEl.classList.add('hidden');
+      } else {
+        if (promptEl) promptEl.classList.remove('hidden');
+        if (wrapEl) wrapEl.classList.toggle('hidden', !show);
+        const on = "py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-[#EA580C] text-white border-transparent shadow-sm";
+        const off = "py-2.5 rounded-xl text-xs font-bold border transition cursor-pointer bg-neutral-50 text-neutral-600 border-neutral-200 hover:bg-neutral-100";
+        if (yesBtn) yesBtn.className = show ? on : off;
+        if (noBtn) noBtn.className = show ? off : on;
       }
 
       if (window.lucide) lucide.createIcons();
@@ -2360,27 +2368,19 @@
       const isExpanded = !!(window.__expandedCards && window.__expandedCards[cardKey])
         || (commentRequired && !(ans.comment || '').trim())
         || (ans.photos || []).some(p => p.status === 'failed');
-      const statusChip = ans.rating
-        ? (ans.rating === 'Good'
-            ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD</span>'
-            : ans.rating === 'Acceptable'
-              ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 shrink-0">ACCEPT</span>'
-              : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 shrink-0">BAD</span>')
-        : (nPhotos > 0
-            ? '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-green-50 text-green-700 border border-green-200 shrink-0">GOOD (PHOTO)</span>'
-            : '<span class="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-neutral-50 text-neutral-400 border border-neutral-200 shrink-0">&mdash;</span>');
       const card = document.createElement('div');
       card.className = "cl-card bg-white p-4 rounded-3xl border shadow-xs space-y-3 " + (isNon ? "border-neutral-200" : "border-orange-100/65") + (isExpanded ? " expanded" : "");
-      const flagBtn = `
-        <span class="shrink-0 flex items-center gap-1.5" title="${isNon ? 'Less vital — tap to make vital' : 'Vital — tap to make less vital'}">
-          <span class="text-[8px] font-extrabold uppercase tracking-wider ${isNon ? 'text-red-500' : 'text-green-600'}">${isNon ? 'Less' : 'Vital'}</span>
-          <button data-action="toggle-equipment-critical" data-item="${escapeHtml(eq)}" role="switch" aria-checked="${!isNon}" aria-label="Vital equipment toggle for ${escapeHtml(eq)}" class="eq-switch ${isNon ? 'eq-off' : ''}"><span class="eq-knob pointer-events-none"></span></button>
-        </span>`;
       card.innerHTML = `
-        <div class="flex items-start justify-between gap-2">
-          <h3 class="text-sm font-bold text-slate-800 flex-1 pr-1 leading-tight break-words">${eq}</h3>
-          ${statusChip}
-          ${flagBtn}
+        <div class="flex items-center gap-2">
+          <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Upload from gallery">
+            <i data-lucide="image" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
+            <input type="file" accept="image/*" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}" multiple>
+          </label>
+          <h3 class="flex-1 text-center text-sm font-bold text-slate-800 leading-tight px-1 break-words">${eq}${isNon ? ' <span class="text-[9px] font-bold text-neutral-400 uppercase align-middle">&middot; non-vital</span>' : ''}</h3>
+          <label class="p-2.5 rounded-xl bg-neutral-50 border border-neutral-200 hover:bg-neutral-100 active:scale-95 transition cursor-pointer shrink-0" title="Take a photo">
+            <i data-lucide="camera" class="w-5 h-5 text-neutral-600 pointer-events-none"></i>
+            <input type="file" accept="image/*" capture="environment" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}">
+          </label>
         </div>
         <div class="flex items-center justify-between gap-2">
           <span class="text-[10px] font-extrabold text-neutral-400 uppercase tracking-widest">Quantity ${isNon ? '&middot; optional' : ''}</span>
@@ -2403,15 +2403,7 @@
             ${commentRequired ? `<span class="text-red-500 font-extrabold normal-case text-xs animate-pulse">(Required)</span>` : ''}
           </div>
           <textarea data-action="update-comment" data-kind="equipment" data-item="${escapeHtml(eq)}" class="w-full text-xs bg-[#F3ECE3]/65 hover:bg-[#EAE1D5]/65 border border-transparent rounded-xl p-2.5 h-12 resize-none focus:bg-white" placeholder="${commentPlaceholder}">${escapeHtml(ans.comment || '')}</textarea>
-          <div class="space-y-1.5">
-            <label class="flex items-center justify-center gap-2 cursor-pointer border border-dashed border-neutral-200 hover:border-neutral-400 py-2.5 rounded-xl bg-neutral-50/50 hover:bg-neutral-100/50 transition">
-              <i data-lucide="camera" class="w-4 h-4 text-neutral-500 shrink-0"></i>
-              <span class="text-[11px] text-neutral-700 font-bold leading-none">Add Photos</span>
-              <span class="text-[10px] text-neutral-400 leading-none">camera or gallery &middot; ${nPhotos}/3</span>
-              <input type="file" accept="image/*" class="hidden" data-action="upload-photo-equipment" data-item="${escapeHtml(eq)}" multiple>
-            </label>
-            ${photosHTML}
-          </div>
+          ${photosHTML || '<p class="text-[10px] text-neutral-400 text-center">No photos yet — use the gallery/camera buttons at the top of this card (up to 3).</p>'}
         </div>
       `;
       return card;
@@ -3006,6 +2998,7 @@
           dismissOverlay();
           sendNotification(existingData ? "Linked to active inspection record" : "Inbound new live session initialized", "success");
 
+          window.state.showNonVital = false; // fresh inspection: ask again
           if (modeVal === 'facility' || modeVal === 'both') {
             navigate('facility');
           } else {
@@ -3039,6 +3032,11 @@
             navigate('landing');
           }
         );
+      }
+
+      if (action === 'set-nonvital-visible') {
+        window.state.showNonVital = (target.getAttribute('data-val') === 'yes');
+        renderEquipmentChecklist();
       }
 
       if (action === 'toggle-card-details') {
