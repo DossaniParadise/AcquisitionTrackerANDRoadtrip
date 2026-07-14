@@ -22,6 +22,15 @@
               'sans-serif'
             ],
           },
+          // In-between shades used throughout the app. Without these defined,
+          // Tailwind silently drops the class (e.g. invisible white-on-white
+          // filter buttons and delete confirmations).
+          colors: {
+            green:   { 150: '#d3f1de', 650: '#149048' },
+            red:     { 250: '#fdb4b4', 650: '#cf2222' },
+            orange:  { 650: '#d94f0c' },
+            neutral: { 150: '#efefef', 250: '#dedede', 255: '#dcdcdc', 350: '#b3b3b3', 550: '#646870', 850: '#23272f' },
+          },
         }
       }
     }
@@ -598,16 +607,6 @@
               <div id="overview-fleet-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 <!-- Dynamic -->
               </div>
-            </div>
-          </div>
-
-          <!-- Quick search tag buttons -->
-          <div class="space-y-1.5">
-            <div class="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Quick Filters:</div>
-            <div class="flex flex-nowrap overflow-x-auto gap-2 py-1 select-none no-scrollbar">
-              <button data-action="toggle-quick-filter" data-val="" id="quick-filter-all" class="shrink-0 text-xs font-bold px-4 py-1.5 rounded-full bg-slate-900 text-white transition cursor-pointer">All</button>
-              <button data-action="toggle-quick-filter" data-val="Acceptable" id="quick-filter-acceptable" class="shrink-0 text-xs font-semibold px-4 py-1.5 rounded-full bg-white text-neutral-600 border border-neutral-200 transition cursor-pointer">Acceptable</button>
-              <button data-action="toggle-quick-filter" data-val="Bad" id="quick-filter-bad" class="shrink-0 text-xs font-semibold px-4 py-1.5 rounded-full bg-white text-neutral-600 border border-neutral-200 transition cursor-pointer">Bad</button>
             </div>
           </div>
 
@@ -2839,17 +2838,6 @@
         else if (activeTerm === 'bad') activeFilterTagEl.className = "text-xs font-bold py-2 rounded-xl bg-red-650 text-white border border-transparent transition shadow-sm cursor-pointer";
       }
 
-      ['all', 'acceptable', 'bad'].forEach(tag => {
-        const el = document.getElementById(`quick-filter-${tag}`);
-        if (el) {
-          if ((selTag === "" && tag === 'all') || (selTag.toLowerCase() === tag)) {
-            el.className = "shrink-0 text-xs font-bold px-4 py-1.5 rounded-full bg-slate-900 text-white border border-transparent transition shadow-xs cursor-pointer";
-          } else {
-            el.className = "shrink-0 text-xs font-semibold px-4 py-1.5 rounded-full bg-white text-neutral-600 border border-neutral-200 hover:bg-neutral-50 transition cursor-pointer";
-          }
-        }
-      });
-
       // An entry is only a real observation if it was rated OR has a photo.
       // Empty placeholder answers (created on load but never filled) are skipped.
       // Photo-but-no-rating defaults to "Good". (Shared rule — see helpers above.)
@@ -3930,10 +3918,6 @@
         renderOverviewCardsList();
       }
 
-      if (action === 'toggle-quick-filter') {
-        window.state.filterTag = valAttr || "";
-        renderOverviewCardsList();
-      }
     });
 
     // Delegating live observation updates
