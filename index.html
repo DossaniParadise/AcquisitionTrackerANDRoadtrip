@@ -3389,12 +3389,11 @@
 
         const ws = XLSX.utils.aoa_to_sheet([HEADERS, ...rows]);
 
-        // Turn photo URL cells into real clickable hyperlinks (column F = index 5)
+        // Photo URL cells: show the full imgbb link AND make it clickable
         linkCells.forEach(({ rowIndex, url }) => {
           const ref = XLSX.utils.encode_cell({ r: rowIndex, c: 5 });
           if (ws[ref]) {
             ws[ref].l = { Target: url, Tooltip: "Open photo" };
-            ws[ref].v = "View Photo";
           }
         });
 
@@ -3404,7 +3403,7 @@
           { wch: 11 },  // Type
           { wch: 30 },  // Item
           { wch: 12 },  // Condition
-          { wch: 14 },  // Photo link
+          { wch: 45 },  // Photo link (full URL, clickable)
           { wch: 26 },  // Caption
           { wch: 50 },  // Comment
           { wch: 16 },  // Auditor
